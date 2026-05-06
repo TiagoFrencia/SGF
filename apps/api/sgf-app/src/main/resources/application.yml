@@ -1,0 +1,73 @@
+spring:
+  application:
+    name: sgf-api
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/sgf}
+    username: ${SPRING_DATASOURCE_USERNAME:sgf}
+    password: ${SPRING_DATASOURCE_PASSWORD:sgf}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+server:
+  error:
+    include-message: always
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+app:
+  jwt:
+    issuer: sgf-api
+    expiration-minutes: 480
+    secret: ${APP_JWT_SECRET:change-me-to-a-long-random-secret}
+  afip:
+    enabled: ${APP_AFIP_ENABLED:true}
+    mode: ${APP_AFIP_MODE:SANDBOX}
+    ws-environment: ${APP_AFIP_WS_ENVIRONMENT:HOMOLOGATION}
+    cuit: ${APP_AFIP_CUIT:20123456789}
+    point-of-sale: ${APP_AFIP_POINT_OF_SALE:1}
+    certificate-path: ${APP_AFIP_CERTIFICATE_PATH:}
+    private-key-path: ${APP_AFIP_PRIVATE_KEY_PATH:}
+    pkcs12-path: ${APP_AFIP_PKCS12_PATH:}
+    pkcs12-password: ${APP_AFIP_PKCS12_PASSWORD:}
+    pkcs12-alias: ${APP_AFIP_PKCS12_ALIAS:}
+    service: ${APP_AFIP_SERVICE:wsfe}
+  anmat:
+    enabled: ${APP_ANMAT_ENABLED:true}
+    mode: ${APP_ANMAT_MODE:SANDBOX}
+    base-url: ${APP_ANMAT_BASE_URL:https://api.anmat.example}
+    report-path: ${APP_ANMAT_REPORT_PATH:/traceability/events}
+    establishment-gln: ${APP_ANMAT_ESTABLISHMENT_GLN:7791234500001}
+    username: ${APP_ANMAT_USERNAME:}
+    password: ${APP_ANMAT_PASSWORD:}
+    timeout-millis: ${APP_ANMAT_TIMEOUT_MILLIS:5000}
+  adesfa:
+    enabled: ${APP_ADESFA_ENABLED:true}
+    mode: ${APP_ADESFA_MODE:SANDBOX}
+    base-url: ${APP_ADESFA_BASE_URL:https://adesfa.example}
+    validation-path: ${APP_ADESFA_VALIDATION_PATH:/validations}
+    software-code: ${APP_ADESFA_SOFTWARE_CODE:SGF-DEMO}
+    provider-code: ${APP_ADESFA_PROVIDER_CODE:SGF-PROVIDER}
+    default-validator-code: ${APP_ADESFA_DEFAULT_VALIDATOR_CODE:PAMI}
+    username: ${APP_ADESFA_USERNAME:}
+    password: ${APP_ADESFA_PASSWORD:}
+    timeout-millis: ${APP_ADESFA_TIMEOUT_MILLIS:5000}
+
+  sync:
+    enabled: ${APP_SYNC_ENABLED:true}
+    remote-url: ${APP_SYNC_REMOTE_URL:http://localhost:8080}
+
+logging:
+  level:
+    root: INFO
+    com.sgf.sync: DEBUG

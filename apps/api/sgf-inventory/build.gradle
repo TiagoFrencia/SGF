@@ -1,0 +1,29 @@
+plugins {
+    id 'java-library'
+    id 'org.springframework.boot' version '3.3.2' apply false
+    id 'io.spring.dependency-management' version '1.1.6' apply false
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencyManagement {
+    imports {
+        mavenBom org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES
+    }
+}
+
+dependencies {
+    api project(':sgf-core')
+    api project(':sgf-catalog')
+    api project(':sgf-audit')
+    implementation project(':sgf-integrations')
+    api 'org.springframework.boot:spring-boot-starter-data-jpa'
+}

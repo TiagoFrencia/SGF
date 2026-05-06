@@ -1,0 +1,23 @@
+plugins {
+    id 'java-library'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    api project(':sgf-core')
+    api project(':sgf-pos')
+    api project(':sgf-inventory')
+
+    // SQLite for local offline DB
+    implementation 'org.xerial:sqlite-jdbc:3.45.3.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+}

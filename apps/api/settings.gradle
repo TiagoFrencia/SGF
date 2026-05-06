@@ -1,2 +1,10 @@
 rootProject.name = "sgf-api"
 
+include 'sgf-core'
+include 'sgf-catalog'
+include 'sgf-audit'
+include 'sgf-inventory'
+include 'sgf-pos'
+include 'sgf-integrations'
+include 'sgf-sync'
+include 'sgf-app'
