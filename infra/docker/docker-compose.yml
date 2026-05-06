@@ -1,0 +1,75 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: sgf
+      POSTGRES_USER: sgf
+      POSTGRES_PASSWORD: sgf
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sgf -d sgf"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ../../
+      dockerfile: apps/api/Dockerfile
+    env_file:
+      - .env
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/sgf}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-sgf}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-sgf}
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-change-me-to-a-long-random-secret}
+      APP_AFIP_ENABLED: ${APP_AFIP_ENABLED:-true}
+      APP_AFIP_MODE: ${APP_AFIP_MODE:-SANDBOX}
+      APP_AFIP_WS_ENVIRONMENT: ${APP_AFIP_WS_ENVIRONMENT:-HOMOLOGATION}
+      APP_AFIP_CUIT: ${APP_AFIP_CUIT:-20123456789}
+      APP_AFIP_POINT_OF_SALE: ${APP_AFIP_POINT_OF_SALE:-1}
+      APP_AFIP_CERTIFICATE_PATH: ${APP_AFIP_CERTIFICATE_PATH:-}
+      APP_AFIP_PRIVATE_KEY_PATH: ${APP_AFIP_PRIVATE_KEY_PATH:-}
+      APP_AFIP_PKCS12_PATH: ${APP_AFIP_PKCS12_PATH:-}
+      APP_AFIP_PKCS12_PASSWORD: ${APP_AFIP_PKCS12_PASSWORD:-}
+      APP_AFIP_PKCS12_ALIAS: ${APP_AFIP_PKCS12_ALIAS:-}
+      APP_ANMAT_ENABLED: ${APP_ANMAT_ENABLED:-true}
+      APP_ANMAT_MODE: ${APP_ANMAT_MODE:-SANDBOX}
+      APP_ANMAT_BASE_URL: ${APP_ANMAT_BASE_URL:-https://api.anmat.example}
+      APP_ANMAT_REPORT_PATH: ${APP_ANMAT_REPORT_PATH:-/traceability/events}
+      APP_ANMAT_ESTABLISHMENT_GLN: ${APP_ANMAT_ESTABLISHMENT_GLN:-7791234500001}
+      APP_ANMAT_USERNAME: ${APP_ANMAT_USERNAME:-}
+      APP_ANMAT_PASSWORD: ${APP_ANMAT_PASSWORD:-}
+      APP_ANMAT_TIMEOUT_MILLIS: ${APP_ANMAT_TIMEOUT_MILLIS:-5000}
+      APP_ADESFA_ENABLED: ${APP_ADESFA_ENABLED:-true}
+      APP_ADESFA_MODE: ${APP_ADESFA_MODE:-SANDBOX}
+      APP_ADESFA_BASE_URL: ${APP_ADESFA_BASE_URL:-https://adesfa.example}
+      APP_ADESFA_VALIDATION_PATH: ${APP_ADESFA_VALIDATION_PATH:-/validations}
+      APP_ADESFA_SOFTWARE_CODE: ${APP_ADESFA_SOFTWARE_CODE:-SGF-DEMO}
+      APP_ADESFA_PROVIDER_CODE: ${APP_ADESFA_PROVIDER_CODE:-SGF-PROVIDER}
+      APP_ADESFA_DEFAULT_VALIDATOR_CODE: ${APP_ADESFA_DEFAULT_VALIDATOR_CODE:-PAMI}
+      APP_ADESFA_USERNAME: ${APP_ADESFA_USERNAME:-}
+      APP_ADESFA_PASSWORD: ${APP_ADESFA_PASSWORD:-}
+      APP_ADESFA_TIMEOUT_MILLIS: ${APP_ADESFA_TIMEOUT_MILLIS:-5000}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./certs:/opt/sgf/certs:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web-admin:
+    image: nginx:1.27-alpine
+    ports:
+      - "8081:80"
+    volumes:
+      - ../../apps/web-admin:/usr/share/nginx/html:ro
+    depends_on:
+      - api
+
+volumes:
+  postgres-data:

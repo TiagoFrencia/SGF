@@ -1,0 +1,20 @@
+CREATE TABLE afip_invoices (
+    id UUID PRIMARY KEY,
+    sale_id UUID NOT NULL UNIQUE REFERENCES sales(id) ON DELETE CASCADE,
+    point_of_sale INTEGER NOT NULL,
+    invoice_type VARCHAR(30) NOT NULL,
+    customer_document_type VARCHAR(20) NOT NULL,
+    customer_document_number VARCHAR(20) NOT NULL,
+    currency_code VARCHAR(10) NOT NULL,
+    net_amount NUMERIC(12, 2) NOT NULL,
+    total_amount NUMERIC(12, 2) NOT NULL,
+    status VARCHAR(30) NOT NULL,
+    cae VARCHAR(20),
+    cae_due_date DATE,
+    provider_reference VARCHAR(120),
+    request_json TEXT NOT NULL,
+    response_json TEXT,
+    authorized_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
