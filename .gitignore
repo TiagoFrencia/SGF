@@ -1,33 +1,52 @@
+```
+# Java/Gradle specific
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.tar
+*.log
+
 # Gradle
 .gradle/
 build/
-out/
-!gradle/wrapper/gradle-wrapper.jar
+!gradle-wrapper.properties
 
 # IDE
-.idea/
-*.iml
-*.ipr
-*.iws
 .vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Python (if any mixed projects)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
 
 # Logs
 *.log
 
-# OS
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# OS generated files
 .DS_Store
 Thumbs.db
 
-# Node (apps/web-admin)
-node_modules/
-dist/
-.npm/
-
-# Environment Variables
-.env
-.env.*
-!.env.example
-
-# Infra / Docker
-infra/docker/certs/*
-!infra/docker/certs/.gitkeep
+# Temporary files
+*.tmp
+*.temp
+```

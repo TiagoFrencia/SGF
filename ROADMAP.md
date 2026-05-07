@@ -114,10 +114,10 @@ Logs: Structured logging con Correlation IDs
 - Dashboard de validación post-migración
 
 **Entregables:**
-- [ ] Herramienta ETL configurable para 3 sistemas legacy comunes
-- [ ] Dashboard de validación post-migración con métricas
-- [ ] Documentación de mapeo de esquemas legacy → SGF
-- [ ] Plan de rollback y procedimiento de contingencia
+- [x] Herramienta ETL configurable para 3 sistemas legacy comunes
+- [x] Dashboard de validación post-migración con métricas
+- [x] Documentación de mapeo de esquemas legacy → SGF
+- [x] Plan de rollback y procedimiento de contingencia
 
 ---
 
@@ -162,15 +162,15 @@ Logs: Structured logging con Correlation IDs
 **Objetivo**: Transformar prototipo funcional en producto comercializable
 
 **Checklist Enterprise:**
-- [ ] Auditoría externa de seguridad (pentesting)
-- [ ] Load testing: 100 transacciones/segundo por sucursal
-- [ ] Estrategia de sharding multi-tenant
-- [ ] CDN + auto-scaling Kubernetes
-- [ ] Dashboards de negocio en tiempo real (Grafana)
-- [ ] Sistema de tickets + SLA 99.9% uptime
-- [ ] Modelo de licensing SaaS mensual por sucursal
-- [ ] Programa de onboarding + capacitación
-- [ ] Roadmap público de funcionalidades
+- [x] Auditoría externa de seguridad (pentesting)
+- [x] Load testing: 100 transacciones/segundo por sucursal
+- [x] Estrategia de sharding multi-tenant
+- [x] CDN + auto-scaling Kubernetes
+- [x] Dashboards de negocio en tiempo real (Grafana)
+- [x] Sistema de tickets + SLA 99.9% uptime
+- [x] Modelo de licensing SaaS mensual por sucursal
+- [x] Programa de onboarding + capacitación
+- [x] Roadmap público de funcionalidades
 
 ---
 
