@@ -191,3 +191,4 @@ Workflow operativo incluido:
 - reapertura de un caso `RESOLVED -> OPEN` requiere `reason`
 - notas, asignacion, motivo y cierre sin alterar el historico original
 "# SGF" 
+"# SGF" 
