@@ -40,8 +40,7 @@ public class InventoryAlertController {
      */
     @GetMapping("/reorder")
     public List<ReorderCalculation> reorderAlerts() {
-        // In production, return persisted calculations or compute on-demand
-        return List.of(); // Placeholder — real implementation reads from ReorderPointRepository
+        return reorderPointService.listReorderAlerts(90, 7);
     }
 
     /**

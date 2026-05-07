@@ -1,6 +1,6 @@
 package com.sgf.integrations.adesfa.web;
 
-import com.sgf.modules.auth.service.SgfUserPrincipal;
+
 import com.sgf.integrations.adesfa.service.AdesfaHealthResponse;
 import com.sgf.integrations.adesfa.service.AdesfaService;
 import jakarta.validation.Valid;
@@ -35,8 +35,8 @@ public class AdesfaController {
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'CASHIER')")
     public AdesfaValidationResponse validateSale(@PathVariable UUID saleId,
                                                  @Valid @RequestBody AdesfaValidationRequest request,
-                                                 @AuthenticationPrincipal SgfUserPrincipal principal) {
-        return adesfaService.validateSale(saleId, request, principal.getUsername());
+                                                 java.security.Principal principal) {
+        return adesfaService.validateSale(saleId, request, principal.getName());
     }
 
     @GetMapping("/validations/{validationId}")

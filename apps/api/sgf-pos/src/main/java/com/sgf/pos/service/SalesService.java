@@ -1,11 +1,8 @@
 package com.sgf.pos.service;
 
-import com.sgf.audit.service.AuditService;
-import com.sgf.modules.auth.domain.UserAccount;
-import com.sgf.modules.auth.domain.UserAccountRepository;
 import com.sgf.core.domain.NotFoundException;
+import com.sgf.core.event.SaleCompletedEvent;
 import com.sgf.inventory.service.InventoryService;
-import com.sgf.integrations.service.OutboxService;
 import com.sgf.pos.domain.Sale;
 import com.sgf.pos.domain.SaleItem;
 import com.sgf.pos.domain.SaleRepository;
@@ -16,6 +13,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.UUID;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,21 +21,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class SalesService {
 
     private final SaleRepository saleRepository;
-    private final UserAccountRepository userAccountRepository;
     private final InventoryService inventoryService;
-    private final AuditService auditService;
-    private final OutboxService outboxService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public SalesService(SaleRepository saleRepository,
-                        UserAccountRepository userAccountRepository,
                         InventoryService inventoryService,
-                        AuditService auditService,
-                        OutboxService outboxService) {
+                        ApplicationEventPublisher eventPublisher) {
         this.saleRepository = saleRepository;
-        this.userAccountRepository = userAccountRepository;
         this.inventoryService = inventoryService;
-        this.auditService = auditService;
-        this.outboxService = outboxService;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -45,8 +37,6 @@ public class SalesService {
      */
     @Transactional
     public SaleCompletedResponse create(SaleRequest request, String actorUsername) {
-        UserAccount actor = userAccountRepository.findByUsernameAndActiveTrue(actorUsername)
-                .orElseThrow(() -> new NotFoundException("User not found"));
 
         Sale sale = saleRepository.findByExternalIdempotencyKey(request.idempotencyKey())
                 .orElse(null);
@@ -60,7 +50,7 @@ public class SalesService {
         sale.setExternalIdempotencyKey(request.idempotencyKey());
         sale.setStatus("COMPLETED");
         sale.setSoldAt(OffsetDateTime.now());
-        sale.setCreatedBy(actor);
+        sale.setCreatedBy(actorUsername);
         sale.setItems(new ArrayList<>());
 
         BigDecimal total = BigDecimal.ZERO;
@@ -81,10 +71,13 @@ public class SalesService {
         sale.setTotalAmount(total);
         Sale saved = saleRepository.save(sale);
 
-        auditService.record(actorUsername, "SALE_COMPLETED", "SALE", saved.getId(),
-                "{\"idempotencyKey\":\"" + saved.getExternalIdempotencyKey() + "\",\"total\":" + total + "}");
-        outboxService.enqueue("SALE", saved.getId(), "SALE_COMPLETED",
-                "{\"idempotencyKey\":\"" + saved.getExternalIdempotencyKey() + "\"}");
+        eventPublisher.publishEvent(new SaleCompletedEvent(
+            saved.getId(),
+            saved.getExternalIdempotencyKey(),
+            saved.getTotalAmount(),
+            actorUsername,
+            saved.getSoldAt()
+        ));
 
         return SaleCompletedResponse.from(saved);
     }
@@ -98,7 +91,8 @@ public class SalesService {
                 new SaleRequest(request.idempotencyKey(),
                         request.items().stream()
                                 .map(i -> new SaleItemRequest(i.productId(), i.quantity(), i.unitPrice()))
-                                .toList()),
+                                .toList(),
+                        null, null),
                 actorUsername);
         return SaleResponse.fromLegacy(result);
     }

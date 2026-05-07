@@ -10,7 +10,15 @@ import java.sql.Statement;
  */
 public class LocalDatabase {
 
-    private static final String DB_URL = "jdbc:sqlite:sgf-local.db";
+    private final String dbUrl;
+
+    public LocalDatabase() {
+        this("jdbc:sqlite:sgf-local.db");
+    }
+
+    public LocalDatabase(String dbUrl) {
+        this.dbUrl = dbUrl;
+    }
 
     static {
         try {
@@ -22,7 +30,7 @@ public class LocalDatabase {
 
     public Connection getConnection() {
         try {
-            return DriverManager.getConnection(DB_URL);
+            return DriverManager.getConnection(dbUrl);
         } catch (Exception e) {
             throw new RuntimeException("Failed to connect to local SQLite DB", e);
         }
@@ -68,6 +76,7 @@ public class LocalDatabase {
                         payload_json TEXT NOT NULL,
                         status TEXT NOT NULL DEFAULT 'PENDING',
                         created_at TEXT NOT NULL,
+                        processed_at TEXT,
                         retries INTEGER DEFAULT 0,
                         last_error TEXT
                     )

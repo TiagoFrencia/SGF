@@ -2,6 +2,7 @@ package com.sgf.pos.web;
 
 import com.sgf.pos.domain.PosOrder;
 import com.sgf.pos.domain.PosOrder.OrderStatus;
+import com.sgf.pos.service.MultiOrderService;
 import com.sgf.pos.service.PosOrderService;
 import java.math.BigDecimal;
 import java.util.List;
@@ -23,9 +24,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class PosOrderController {
 
     private final PosOrderService orderService;
+    private final MultiOrderService multiOrderService;
 
-    public PosOrderController(PosOrderService orderService) {
+    public PosOrderController(PosOrderService orderService, MultiOrderService multiOrderService) {
         this.orderService = orderService;
+        this.multiOrderService = multiOrderService;
     }
 
     @PostMapping
@@ -93,11 +96,79 @@ public class PosOrderController {
             @RequestParam UUID branchId,
             @RequestParam(required = false) OrderStatus status) {
         if (status != null) {
-            return ResponseEntity.ok(orderService.listDrafts(branchId).stream()
-                    .map(PosOrderResponse::from).toList());
+            var filtered = orderService.listOpenOrders(branchId).stream()
+                    .filter(order -> order.getStatus() == status)
+                    .map(PosOrderResponse::from)
+                    .toList();
+            return ResponseEntity.ok(filtered);
         }
         return ResponseEntity.ok(orderService.listOpenOrders(branchId).stream()
                 .map(PosOrderResponse::from).toList());
+    }
+
+    @PostMapping("/terminals/{terminalId}/new")
+    public ResponseEntity<PosOrderResponse> newTerminalOrder(
+            @PathVariable String terminalId,
+            @RequestBody CreateDraftRequest request) {
+        PosOrder order = multiOrderService.newOrder(
+                terminalId,
+                request.branchId(),
+                request.customerName(),
+                request.customerDocument(),
+                request.notes()
+        );
+        return ResponseEntity.ok(PosOrderResponse.from(order));
+    }
+
+    @PatchMapping("/terminals/{terminalId}/switch/{orderId}")
+    public ResponseEntity<PosOrderResponse> switchTerminalOrder(
+            @PathVariable String terminalId,
+            @PathVariable UUID orderId) {
+        PosOrder order = multiOrderService.switchTo(terminalId, orderId);
+        return ResponseEntity.ok(PosOrderResponse.from(order));
+    }
+
+    @GetMapping("/terminals/{terminalId}/active")
+    public ResponseEntity<PosOrderResponse> getTerminalActiveOrder(@PathVariable String terminalId) {
+        return multiOrderService.getActive(terminalId)
+                .map(PosOrderResponse::from)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/terminals/{terminalId}")
+    public ResponseEntity<List<PosOrderResponse>> listTerminalOrders(@PathVariable String terminalId) {
+        return ResponseEntity.ok(multiOrderService.listOpen(terminalId).stream()
+                .map(PosOrderResponse::from)
+                .toList());
+    }
+
+    @DeleteMapping("/terminals/{terminalId}")
+    public ResponseEntity<Void> closeTerminal(@PathVariable String terminalId) {
+        multiOrderService.closeTerminal(terminalId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/terminals/{terminalId}/recover")
+    public ResponseEntity<TerminalRecoveryResponse> recoverTerminal(
+            @PathVariable String terminalId,
+            @RequestParam UUID branchId) {
+        int recovered = multiOrderService.recoverTerminal(terminalId, branchId);
+        Optional<UUID> active = multiOrderService.getActiveOrderId(terminalId);
+        return ResponseEntity.ok(new TerminalRecoveryResponse(
+                terminalId,
+                branchId,
+                recovered,
+                active.orElse(null)
+        ));
+    }
+
+    @DeleteMapping("/terminals/{terminalId}/orders/{orderId}")
+    public ResponseEntity<Void> removeTerminalOrder(
+            @PathVariable String terminalId,
+            @PathVariable UUID orderId) {
+        multiOrderService.removeFromTerminal(terminalId, orderId);
+        return ResponseEntity.noContent().build();
     }
 
     // --- Request DTOs ---
@@ -111,6 +182,13 @@ public class PosOrderController {
     public record ScanRequest(String gtin, int quantity, BigDecimal unitPrice) {}
 
     public record CompleteOrderRequest(String paymentMethod, String idempotencyKey) {}
+
+    public record TerminalRecoveryResponse(
+            String terminalId,
+            UUID branchId,
+            int recoveredOrders,
+            UUID activeOrderId
+    ) {}
 
     // --- Response DTO ---
 

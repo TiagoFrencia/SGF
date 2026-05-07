@@ -1,0 +1,38 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sgf-ingress
+  namespace: sgf-system
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - sgf.tudominio.com.ar
+        - api.sgf.tudominio.com.ar
+      secretName: sgf-tls
+  rules:
+    - host: api.sgf.tudominio.com.ar
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sgf-api
+                port:
+                  number: 80
+    - host: sgf.tudominio.com.ar
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sgf-web-admin
+                port:
+                  number: 80

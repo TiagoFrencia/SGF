@@ -107,4 +107,23 @@ public class Product extends BaseEntity {
     public void setPresentations(List<ProductPresentation> presentations) {
         this.presentations = presentations;
     }
+
+    private String alfabetCode;
+    private String kairosCode;
+
+    public String getAlfabetCode() {
+        return alfabetCode;
+    }
+
+    public void setAlfabetCode(String alfabetCode) {
+        this.alfabetCode = alfabetCode;
+    }
+
+    public String getKairosCode() {
+        return kairosCode;
+    }
+
+    public void setKairosCode(String kairosCode) {
+        this.kairosCode = kairosCode;
+    }
 }

@@ -1,6 +1,6 @@
 package com.sgf.pos.domain;
 
-import com.sgf.modules.auth.domain.UserAccount;
+
 import com.sgf.core.domain.BaseEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -31,9 +31,8 @@ public class Sale extends BaseEntity {
     @Column(nullable = false)
     private OffsetDateTime soldAt;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "created_by")
-    private UserAccount createdBy;
+    @Column(name = "created_by", nullable = false)
+    private String createdBy;
 
     @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SaleItem> items = new ArrayList<>();
@@ -70,11 +69,11 @@ public class Sale extends BaseEntity {
         this.soldAt = soldAt;
     }
 
-    public UserAccount getCreatedBy() {
+    public String getCreatedBy() {
         return createdBy;
     }
 
-    public void setCreatedBy(UserAccount createdBy) {
+    public void setCreatedBy(String createdBy) {
         this.createdBy = createdBy;
     }
 

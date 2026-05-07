@@ -228,17 +228,7 @@ public class BarcodeService {
             return lotNumber != null || expiry != null || serial != null;
         }
 
-        public Optional<String> expiry() {
-            return Optional.ofNullable(expiry);
-        }
 
-        public Optional<String> lotNumber() {
-            return Optional.ofNullable(lotNumber);
-        }
-
-        public Optional<String> serial() {
-            return Optional.ofNullable(serial);
-        }
     }
 
     public enum BarcodeType {

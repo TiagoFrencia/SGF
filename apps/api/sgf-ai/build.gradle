@@ -1,0 +1,13 @@
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    implementation project(':sgf-core')
+    implementation project(':sgf-catalog')
+    implementation project(':sgf-inventory')
+    
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'com.microsoft.onnxruntime:onnxruntime:1.17.0'
+    implementation 'org.apache.commons:commons-math3:3.6.1'
+}

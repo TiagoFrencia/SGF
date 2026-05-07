@@ -49,7 +49,7 @@ public class ShadowMode {
         report.addSource(runForSystem(new NixfarmaExtractor(), "Nixfarma"));
         report.addSource(runForSystem(new DbfExtractor(), "DBF_Generic"));
 
-        report.finalize();
+        report.computeOverallScore();
         log.info("Shadow mode complete: {} records across {} sources — overall score: {}/100",
                 report.totalRecords, report.sourceCount(), report.overallScore);
 
@@ -134,7 +134,7 @@ public class ShadowMode {
             totalWarnings += r.warnings;
         }
 
-        void finalize() {
+        void computeOverallScore() {
             overallScore = totalRecords > 0 ? (totalPassed * 100.0 / totalRecords) : 0;
             readiness = overallScore >= 90 ? "READY"
                     : overallScore >= 70 ? "NEEDS_REVIEW"

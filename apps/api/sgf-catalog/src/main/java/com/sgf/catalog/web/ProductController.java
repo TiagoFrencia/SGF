@@ -1,10 +1,10 @@
 package com.sgf.catalog.web;
 
-import com.sgf.modules.auth.service.SgfUserPrincipal;
+
 import com.sgf.catalog.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,8 +23,8 @@ public class ProductController {
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST')")
     public ProductResponse create(@Valid @RequestBody CreateProductRequest request,
-                                  @AuthenticationPrincipal SgfUserPrincipal principal) {
-        return productService.create(request, principal.getUsername());
+                                  java.security.Principal principal) {
+        return productService.create(request, principal.getName());
     }
 }
 

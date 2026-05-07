@@ -61,7 +61,7 @@ public class VademecumController {
             @PathVariable String gtin1, @PathVariable String gtin2) {
         boolean safe = interactionService.canBeTakenTogether(gtin1, gtin2);
         InteractionResult result = interactionService.checkInteractions(List.of(gtin1, gtin2));
-        return ResponseEntity.ok(new PairwiseCheckResponse(gtin1, gtin2, safe, result));
+        return ResponseEntity.ok(new PairwiseCheckResponse(gtin1, gtin2, safe, InteractionCheckResponse.from(result)));
     }
 
     /**

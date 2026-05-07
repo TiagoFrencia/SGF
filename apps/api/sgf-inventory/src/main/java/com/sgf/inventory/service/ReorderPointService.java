@@ -6,7 +6,6 @@ import com.sgf.inventory.domain.Batch;
 import com.sgf.inventory.domain.BatchRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -138,6 +137,18 @@ public class ReorderPointService {
         }
     }
 
+    /**
+     * Computes current reorder alerts on demand for all products.
+     */
+    @Transactional(readOnly = true)
+    public List<ReorderCalculation> listReorderAlerts(int analysisDays, int leadTimeDays) {
+        return productRepository.findAll().stream()
+                .map(product -> calculate(product.getId(), analysisDays, leadTimeDays))
+                .filter(ReorderCalculation::needsReorder)
+                .sorted(java.util.Comparator.comparing(ReorderCalculation::productName))
+                .toList();
+    }
+
     private DemandStats computeDemandStats(UUID productId, int windowDays) {
         // In a full implementation, this queries sale_items joined with sales
         // for completed sales in the analysis window.
@@ -202,5 +213,16 @@ public class ReorderPointService {
      */
     public interface ReorderPointRepository {
         void save(ReorderCalculation calculation);
+    }
+
+    @org.springframework.stereotype.Component
+    public static class InMemoryReorderPointRepository implements ReorderPointRepository {
+        private final java.util.concurrent.ConcurrentHashMap<UUID, ReorderCalculation> latest =
+                new java.util.concurrent.ConcurrentHashMap<>();
+
+        @Override
+        public void save(ReorderCalculation calculation) {
+            latest.put(calculation.productId(), calculation);
+        }
     }
 }

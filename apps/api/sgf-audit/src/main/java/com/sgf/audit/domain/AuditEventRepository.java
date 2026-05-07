@@ -6,5 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AuditEventRepository extends JpaRepository<AuditEvent, UUID> {
     java.util.List<AuditEvent> findAllByOrderByCreatedAtDesc(Pageable pageable);
+    java.util.List<AuditEvent> findAllByOrderByCreatedAtAsc(Pageable pageable);
 }
 

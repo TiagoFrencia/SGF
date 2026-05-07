@@ -1,11 +1,13 @@
 package com.sgf.pos.web;
 
-import com.sgf.modules.auth.service.SgfUserPrincipal;
+import org.springframework.http.ResponseEntity;
+
+
 import com.sgf.pos.service.SalesService;
 import jakarta.validation.Valid;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -23,8 +25,7 @@ public class SalesController {
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'CASHIER')")
     public SaleResponse create(@Valid @RequestBody CreateSaleRequest request,
-                               @AuthenticationPrincipal SgfUserPrincipal principal) {
-        return salesService.create(request, principal.getUsername());
+                               java.security.Principal principal) {
+        return salesService.createLegacy(request, principal.getName());
     }
 }
-

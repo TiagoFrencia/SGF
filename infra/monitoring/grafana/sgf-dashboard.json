@@ -1,0 +1,94 @@
+{
+  "title": "SGF - Dashboard Operativo",
+  "uid": "sgf-main",
+  "schemaVersion": 38,
+  "version": 1,
+  "panels": [
+    {
+      "id": 1,
+      "title": "Ventas por Minuto",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(http_server_requests_seconds_count{uri='/api/sales', status='201'}[1m]) * 60",
+          "legendFormat": "Ventas/min"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Tiempo de Respuesta API (p95)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[5m]))",
+          "legendFormat": "p95 latency"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "JVM Memory Usage",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "jvm_memory_used_bytes{area='heap'} / 1024 / 1024",
+          "legendFormat": "Heap Used (MB)"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Alertas AFIP (Errores de Facturación)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 4 },
+      "targets": [
+        {
+          "expr": "increase(sgf_afip_errors_total[1h])",
+          "legendFormat": "Errores AFIP/hora"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Predicciones IA Realizadas",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "increase(sgf_ai_forecasts_total[24h])",
+          "legendFormat": "Predicciones/día"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Alertas de Fraude",
+      "type": "stat",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 5, "color": "yellow" },
+              { "value": 10, "color": "red" }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 8 },
+      "targets": [
+        {
+          "expr": "increase(sgf_fraud_alerts_total[24h])",
+          "legendFormat": "Alertas/día"
+        }
+      ]
+    }
+  ],
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "30s"
+}

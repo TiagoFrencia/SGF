@@ -65,10 +65,10 @@ Logs: Structured logging con Correlation IDs
 4. Seguridad base: pgcrypto, TLS 1.3, RBAC
 
 **Entregables:**
-- [ ] Repositorio con arquitectura modular documentada
-- [ ] Esquema de base de datos normalizado (3FN+) con extensiones AI
-- [ ] Prototipo funcional offline: CRUD de productos + venta local
-- [ ] Sistema de autenticación + auditoría básica
+- [x] Repositorio con arquitectura modular documentada
+- [x] Esquema de base de datos normalizado (3FN+) con extensiones AI
+- [x] Prototipo funcional offline: CRUD de productos + venta local
+- [x] Sistema de autenticación + auditoría básica
 
 ---
 
@@ -81,10 +81,10 @@ Logs: Structured logging con Correlation IDs
 3. **Integración de Vademécums** - AlfaBeta, Kairos, sugerencias de genéricos
 
 **Entregables:**
-- [ ] Módulo de inventario con gestión de lotes/vencimientos
-- [ ] POS funcional con soporte offline y múltiples órdenes
-- [ ] Integración con AlfaBeta/Kairos (sandbox/testing)
-- [ ] Sistema de alertas de stock y vencimientos
+- [x] Módulo de inventario con gestión de lotes/vencimientos
+- [x] POS funcional con soporte offline y múltiples órdenes
+- [x] Integración con AlfaBeta/Kairos (sandbox/testing)
+- [x] Sistema de alertas de stock y vencimientos
 
 ---
 
@@ -97,10 +97,10 @@ Logs: Structured logging con Correlation IDs
 3. **ADESFA 3.1.0** (validación obras sociales: PAMI, OSDE, Swiss Medical)
 
 **Entregables:**
-- [ ] Módulo AFIP funcional en modo sandbox + producción
-- [ ] Integración ANMAT para productos trazables (DataMatrix)
-- [ ] Motor ADESFA para al menos 3 validadores principales
-- [ ] Sistema de auditoría regulatoria (logs inmutables)
+- [x] Módulo AFIP funcional en modo sandbox + producción
+- [x] Integración ANMAT para productos trazables (DataMatrix)
+- [x] Motor ADESFA para al menos 3 validadores principales
+- [x] Sistema de auditoría regulatoria (logs inmutables)
 
 ---
 

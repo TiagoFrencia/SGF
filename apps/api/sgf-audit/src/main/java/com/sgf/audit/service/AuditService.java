@@ -17,14 +17,43 @@ public class AuditService {
         this.auditEventRepository = auditEventRepository;
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public void record(String actorUsername, String eventType, String aggregateType, UUID aggregateId, String detailsJson) {
+        String lastHash = auditEventRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(0, 1))
+                .stream().findFirst().map(AuditEvent::getHash).orElse("0".repeat(64));
+
         AuditEvent event = new AuditEvent();
         event.setActorUsername(actorUsername);
         event.setEventType(eventType);
         event.setAggregateType(aggregateType);
         event.setAggregateId(aggregateId);
         event.setDetailsJson(detailsJson);
+        event.setPreviousHash(lastHash);
+        
+        String dataToHash = lastHash
+                + nullSafe(actorUsername)
+                + nullSafe(eventType)
+                + (aggregateId != null ? aggregateId.toString() : "")
+                + nullSafe(detailsJson);
+        event.setHash(calculateHash(dataToHash));
+        
         auditEventRepository.save(event);
+    }
+
+    private String calculateHash(String data) {
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] encodedhash = digest.digest(data.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder(2 * encodedhash.length);
+            for (byte b : encodedhash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("Hash calculation failed", e);
+        }
     }
 
     public List<AuditEventResponse> latest(int limit) {
@@ -32,5 +61,59 @@ public class AuditService {
                 .map(AuditEventResponse::from)
                 .toList();
     }
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public AuditChainVerification verifyChain(int limit) {
+        List<AuditEvent> ordered = auditEventRepository.findAllByOrderByCreatedAtAsc(PageRequest.of(0, limit));
+        if (ordered.isEmpty()) {
+            return new AuditChainVerification(true, 0, null, "Empty chain");
+        }
+
+        String expectedPrevious = "0".repeat(64);
+        int verified = 0;
+        for (AuditEvent event : ordered) {
+            String prev = event.getPreviousHash();
+            if (prev == null || !prev.equals(expectedPrevious)) {
+                return new AuditChainVerification(
+                        false,
+                        verified,
+                        event.getId(),
+                        "Broken previous hash link"
+                );
+            }
+
+            String dataToHash = expectedPrevious
+                    + nullSafe(event.getActorUsername())
+                    + nullSafe(event.getEventType())
+                    + (event.getAggregateId() != null ? event.getAggregateId().toString() : "")
+                    + nullSafe(event.getDetailsJson());
+
+            String expectedHash = calculateHash(dataToHash);
+            if (event.getHash() == null || !event.getHash().equals(expectedHash)) {
+                return new AuditChainVerification(
+                        false,
+                        verified,
+                        event.getId(),
+                        "Hash mismatch"
+                );
+            }
+
+            expectedPrevious = event.getHash();
+            verified++;
+        }
+
+        return new AuditChainVerification(true, verified, null, "OK");
+    }
+
+    private String nullSafe(String value) {
+        return value == null ? "" : value;
+    }
+
+    public record AuditChainVerification(
+            boolean valid,
+            int verifiedEvents,
+            UUID brokenEventId,
+            String message
+    ) {}
 }
 

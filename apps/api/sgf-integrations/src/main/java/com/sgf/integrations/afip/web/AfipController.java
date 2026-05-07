@@ -1,6 +1,6 @@
 package com.sgf.integrations.afip.web;
 
-import com.sgf.modules.auth.service.SgfUserPrincipal;
+
 import com.sgf.integrations.afip.service.AfipConnectivityService;
 import com.sgf.integrations.afip.service.AfipService;
 import jakarta.validation.Valid;
@@ -30,8 +30,8 @@ public class AfipController {
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST')")
     public AfipInvoiceResponse authorize(@PathVariable UUID saleId,
                                          @Valid @RequestBody AfipAuthorizeInvoiceRequest request,
-                                         @AuthenticationPrincipal SgfUserPrincipal principal) {
-        return afipService.authorizeSaleInvoice(saleId, request, principal.getUsername());
+                                         java.security.Principal principal) {
+        return afipService.authorizeSaleInvoice(saleId, request, principal.getName());
     }
 
     @GetMapping("/{invoiceId}")

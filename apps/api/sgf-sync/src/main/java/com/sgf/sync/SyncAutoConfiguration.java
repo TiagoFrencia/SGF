@@ -6,7 +6,7 @@ import com.sgf.sync.local.LocalDatabase;
 import com.sgf.sync.local.LocalSyncQueue;
 import com.sgf.sync.queue.RemoteSyncClient;
 import com.sgf.sync.queue.SyncReplayProcessor;
-import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -21,6 +21,8 @@ public class SyncAutoConfiguration {
 
     @Value("${app.sync.remote-url:http://localhost:8080}")
     private String remoteUrl;
+    @Autowired
+    private SyncReplayProcessor syncReplayProcessor;
 
     @Bean
     public LocalDatabase localDatabase() {
@@ -54,6 +56,6 @@ public class SyncAutoConfiguration {
      */
     @Scheduled(fixedDelay = 30_000)
     public void scheduledReplay() {
-        syncReplayProcessor(localSyncQueue(localDatabase(), new ObjectMapper()), remoteSyncClient()).replay();
+        syncReplayProcessor.replay();
     }
 }

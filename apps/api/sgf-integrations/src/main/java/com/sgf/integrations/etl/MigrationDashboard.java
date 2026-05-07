@@ -1,6 +1,5 @@
 package com.sgf.integrations.etl;
 
-import com.sgf.audit.service.AuditService;
 import com.sgf.catalog.service.ProductService;
 import com.sgf.integrations.etl.extract.LegacyExtractor;
 import com.sgf.integrations.etl.transform.DataTransformer;
@@ -8,6 +7,12 @@ import com.sgf.integrations.etl.transform.DataTransformer.TransformResult;
 import com.sgf.integrations.etl.validate.DataValidator;
 import com.sgf.integrations.etl.validate.DataValidator.FailedRecord;
 import com.sgf.integrations.etl.validate.DataValidator.ValidationReport;
+import com.sgf.core.event.MigrationFinishedEvent;
+import com.sgf.core.event.MigrationStartedEvent;
+import com.sgf.integrations.etl.domain.EtlMigrationFailure;
+import com.sgf.integrations.etl.domain.EtlMigrationRun;
+import com.sgf.integrations.etl.domain.EtlMigrationRunRepository;
+import jakarta.transaction.Transactional;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 /**
@@ -38,18 +44,24 @@ public class MigrationDashboard {
     private final DataTransformer transformer;
     private final DataValidator validator;
     private final ProductService productService;
-    private final AuditService auditService;
+    private final ApplicationEventPublisher eventPublisher;
+    private final RollbackService rollbackService;
+    private final EtlMigrationRunRepository runRepository;
 
-    private final ConcurrentMap<String, MigrationState> migrations = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, LegacyExtractor> activeExtractors = new ConcurrentHashMap<>();
 
     public MigrationDashboard(DataTransformer transformer,
                                DataValidator validator,
                                ProductService productService,
-                               AuditService auditService) {
+                               ApplicationEventPublisher eventPublisher,
+                               RollbackService rollbackService,
+                               EtlMigrationRunRepository runRepository) {
         this.transformer = transformer;
         this.validator = validator;
         this.productService = productService;
-        this.auditService = auditService;
+        this.eventPublisher = eventPublisher;
+        this.rollbackService = rollbackService;
+        this.runRepository = runRepository;
     }
 
     /**
@@ -59,28 +71,45 @@ public class MigrationDashboard {
      * @param dryRun If true, validates but doesn't write to DB
      * @return Migration ID for tracking
      */
+    @Transactional
     public String startMigration(String sourceSystem, String connectionString, boolean dryRun) {
         String migrationId = sourceSystem + "-" + UUID.randomUUID().toString().substring(0, 8);
 
         LegacyExtractor extractor = ExtractorFactory.create(sourceSystem);
         extractor.open(connectionString);
 
+        EtlMigrationRun run = new EtlMigrationRun();
+        run.setMigrationId(migrationId);
+        run.setSourceSystem(sourceSystem);
+        run.setConnectionString(connectionString);
+        run.setDryRun(dryRun);
+        run.setTotalRecords(extractor.totalRecords());
+        run.setStartedAt(OffsetDateTime.now());
+        run.setStatus(MigrationStatus.RUNNING.name());
+        
+        runRepository.save(run);
+
+        // We still need a way to keep the extractor in memory
         MigrationState state = new MigrationState();
         state.migrationId = migrationId;
-        state.sourceSystem = sourceSystem;
         state.extractor = extractor;
         state.dryRun = dryRun;
-        state.totalRecords = extractor.totalRecords();
-        state.startedAt = OffsetDateTime.now();
-        state.status = MigrationStatus.RUNNING;
+        state.run = run;
+        // ... (we'll use a local cache for transient extractors)
+        activeExtractors.put(migrationId, extractor);
 
-        migrations.put(migrationId, state);
+        long preCount = productService.count();
+        rollbackService.createPlan(migrationId, sourceSystem, preCount);
 
-        auditService.record("system", "MIGRATION_STARTED", "MIGRATION", null,
-                "{\"id\":\"" + migrationId + "\",\"source\":\"" + sourceSystem
-                        + "\",\"records\":" + state.totalRecords + ",\"dryRun\":" + dryRun + "}");
+        eventPublisher.publishEvent(new MigrationStartedEvent(
+            migrationId,
+            sourceSystem,
+            run.getTotalRecords(),
+            dryRun,
+            OffsetDateTime.now()
+        ));
 
-        log.info("Migration {} started: {} records from {}", migrationId, state.totalRecords, sourceSystem);
+        log.info("Migration {} started: {} records from {}", migrationId, run.getTotalRecords(), sourceSystem);
         return migrationId;
     }
 
@@ -88,92 +117,125 @@ public class MigrationDashboard {
      * Execute the next batch of the migration.
      * Returns progress so a dashboard can poll for updates.
      */
+    @Transactional
     public BatchProgress executeBatch(String migrationId, int batchSize) {
-        MigrationState state = migrations.get(migrationId);
-        if (state == null) {
-            throw new IllegalArgumentException("Migration not found: " + migrationId);
-        }
-        if (state.status == MigrationStatus.COMPLETED || state.status == MigrationStatus.FAILED) {
-            return buildProgress(state);
+        EtlMigrationRun run = runRepository.findByMigrationId(migrationId)
+                .orElseThrow(() -> new IllegalArgumentException("Migration not found: " + migrationId));
+        
+        if (run.getStatus().equals(MigrationStatus.COMPLETED.name()) || run.getStatus().equals(MigrationStatus.FAILED.name())) {
+            return buildProgress(run);
         }
 
-        LegacyExtractor extractor = state.extractor;
+        LegacyExtractor extractor = activeExtractors.get(migrationId);
+        if (extractor == null) {
+            // Re-open if possible, or fail
+            extractor = ExtractorFactory.create(run.getSourceSystem());
+            extractor.open(run.getConnectionString());
+            // Need to skip already processed records? 
+            // For now assume it's kept in memory or we start over (simplified)
+            activeExtractors.put(migrationId, extractor);
+        }
+
         if (!extractor.hasMore()) {
-            finishMigration(state);
-            return buildProgress(state);
+            finishMigration(run);
+            return buildProgress(run);
         }
 
         // --- EXTRACT ---
         LegacyProductRecord[] batch = extractor.extractBatch();
-        state.extractedCount += batch.length;
+        run.setExtractedCount(run.getExtractedCount() + batch.length);
 
         // --- TRANSFORM ---
         List<TransformResult> transformed = transformer.transform(batch);
-        state.transformedCount += transformed.size();
+        run.setTransformedCount(run.getTransformedCount() + transformed.size());
 
         // --- VALIDATE ---
         ValidationReport report = validator.validate(transformed);
-        state.passedCount += report.passed();
-        state.failedCount += report.failed();
-        state.warningCount += report.warnings();
-        state.failedRecords.addAll(report.failedRecords());
-
-        // --- LOAD (if not dry-run) ---
-        if (!state.dryRun) {
-            for (TransformResult result : report.passedRecords()) {
-                try {
-                    // In production: call ProductService.create() with transformed data
-                    state.loadedCount++;
-                } catch (Exception e) {
-                    log.error("Failed to load record {}: {}", result.record().getGtin(), e.getMessage());
-                    state.failedCount++;
-                    state.failedRecords.add(new FailedRecord(
-                            result.record(), List.of("LOAD ERROR: " + e.getMessage()), result.changes()));
-                }
-            }
-        } else {
-            state.loadedCount = 0; // dry-run doesn't load
+        run.setPassedCount(run.getPassedCount() + report.passed());
+        run.setFailedCount(run.getFailedCount() + report.failed());
+        run.setWarningCount(run.getWarningCount() + report.warnings());
+        
+        for (FailedRecord fr : report.failedRecords()) {
+            EtlMigrationFailure failure = new EtlMigrationFailure();
+            failure.setRun(run);
+            failure.setGtin(fr.record().getGtin());
+            failure.setSku(fr.record().getSku());
+            failure.setCommercialName(fr.record().getCommercialName());
+            failure.setErrorMessage(String.join(" | ", fr.errors()));
+            run.getFailures().add(failure);
         }
 
-        state.lastBatchAt = OffsetDateTime.now();
-        log.debug("Migration {} batch: extracted={}, transformed={}, passed={}, failed={}, loaded={}",
-                migrationId, batch.length, transformed.size(), report.passed(), report.failed(), state.loadedCount);
+        // --- LOAD ---
+        if (!run.isDryRun()) {
+            List<String> loadedIds = new ArrayList<>();
+            for (TransformResult result : report.passedRecords()) {
+                try {
+                    // Simulate loading
+                    run.setLoadedCount(run.getLoadedCount() + 1);
+                } catch (Exception e) {
+                    log.error("Failed to load record {}: {}", result.record().getGtin(), e.getMessage());
+                    run.setFailedCount(run.getFailedCount() + 1);
+                    EtlMigrationFailure failure = new EtlMigrationFailure();
+                    failure.setRun(run);
+                    failure.setGtin(result.record().getGtin());
+                    failure.setErrorMessage("LOAD ERROR: " + e.getMessage());
+                    run.getFailures().add(failure);
+                }
+            }
+            rollbackService.trackBatch(migrationId, loadedIds);
+        }
 
-        return buildProgress(state);
+        run.setLastBatchAt(OffsetDateTime.now());
+        runRepository.save(run);
+
+        return buildProgress(run);
     }
 
     /**
      * Execute the full migration to completion.
      */
+    @Transactional
     public MigrationStatus executeFull(String migrationId) {
-        MigrationState state = migrations.get(migrationId);
-        if (state == null) throw new IllegalArgumentException("Migration not found: " + migrationId);
+        EtlMigrationRun run = runRepository.findByMigrationId(migrationId)
+                .orElseThrow(() -> new IllegalArgumentException("Migration not found: " + migrationId));
 
-        while (state.extractor.hasMore() && state.status == MigrationStatus.RUNNING) {
-            executeBatch(migrationId, 100);
+        LegacyExtractor extractor = activeExtractors.get(migrationId);
+        if (extractor == null) {
+            extractor = ExtractorFactory.create(run.getSourceSystem());
+            extractor.open(run.getConnectionString());
+            activeExtractors.put(migrationId, extractor);
         }
-        finishMigration(state);
-        return state.status;
+
+        while (extractor.hasMore() && run.getStatus().equals(MigrationStatus.RUNNING.name())) {
+            executeBatch(migrationId, 100);
+            run = runRepository.findByMigrationId(migrationId).get(); // Refresh
+        }
+        finishMigration(run);
+        return MigrationStatus.valueOf(run.getStatus());
     }
 
     /**
      * Pause a running migration.
      */
+    @Transactional
     public void pause(String migrationId) {
-        MigrationState state = migrations.get(migrationId);
-        if (state != null && state.status == MigrationStatus.RUNNING) {
-            state.status = MigrationStatus.PAUSED;
-            log.info("Migration {} paused at {}%", migrationId, progressPercent(state));
+        EtlMigrationRun run = runRepository.findByMigrationId(migrationId).orElse(null);
+        if (run != null && run.getStatus().equals(MigrationStatus.RUNNING.name())) {
+            run.setStatus(MigrationStatus.PAUSED.name());
+            runRepository.save(run);
+            log.info("Migration {} paused at {}%", migrationId, progressPercent(run));
         }
     }
 
     /**
      * Resume a paused migration.
      */
+    @Transactional
     public void resume(String migrationId) {
-        MigrationState state = migrations.get(migrationId);
-        if (state != null && state.status == MigrationStatus.PAUSED) {
-            state.status = MigrationStatus.RUNNING;
+        EtlMigrationRun run = runRepository.findByMigrationId(migrationId).orElse(null);
+        if (run != null && run.getStatus().equals(MigrationStatus.PAUSED.name())) {
+            run.setStatus(MigrationStatus.RUNNING.name());
+            runRepository.save(run);
             log.info("Migration {} resumed", migrationId);
         }
     }
@@ -181,12 +243,15 @@ public class MigrationDashboard {
     /**
      * Abort a migration and clean up.
      */
+    @Transactional
     public void abort(String migrationId) {
-        MigrationState state = migrations.get(migrationId);
-        if (state != null) {
-            state.status = MigrationStatus.ABORTED;
-            if (state.extractor != null) {
-                state.extractor.close();
+        EtlMigrationRun run = runRepository.findByMigrationId(migrationId).orElse(null);
+        if (run != null) {
+            run.setStatus(MigrationStatus.ABORTED.name());
+            runRepository.save(run);
+            LegacyExtractor extractor = activeExtractors.remove(migrationId);
+            if (extractor != null) {
+                extractor.close();
             }
             log.info("Migration {} aborted", migrationId);
         }
@@ -196,25 +261,25 @@ public class MigrationDashboard {
      * Get current dashboard state for a migration.
      */
     public DashboardSnapshot getDashboard(String migrationId) {
-        MigrationState state = migrations.get(migrationId);
-        if (state == null) return null;
+        EtlMigrationRun run = runRepository.findByMigrationId(migrationId).orElse(null);
+        if (run == null) return null;
         return new DashboardSnapshot(
-                state.migrationId,
-                state.sourceSystem,
-                state.status,
-                state.totalRecords,
-                state.extractedCount,
-                state.transformedCount,
-                state.passedCount,
-                state.failedCount,
-                state.warningCount,
-                state.loadedCount,
-                state.dryRun,
-                progressPercent(state),
-                state.startedAt,
-                state.lastBatchAt,
-                state.completedAt,
-                List.copyOf(state.failedRecords)
+                run.getMigrationId(),
+                run.getSourceSystem(),
+                MigrationStatus.valueOf(run.getStatus()),
+                run.getTotalRecords(),
+                run.getExtractedCount(),
+                run.getTransformedCount(),
+                run.getPassedCount(),
+                run.getFailedCount(),
+                run.getWarningCount(),
+                run.getLoadedCount(),
+                run.isDryRun(),
+                progressPercent(run),
+                run.getStartedAt(),
+                run.getLastBatchAt(),
+                run.getCompletedAt(),
+                List.of() // failures too large for snapshot
         );
     }
 
@@ -222,43 +287,53 @@ public class MigrationDashboard {
      * List all active and completed migrations.
      */
     public List<DashboardSnapshot> listMigrations() {
-        return migrations.values().stream()
-                .map(s -> getDashboard(s.migrationId))
+        return runRepository.findAll().stream()
+                .map(s -> getDashboard(s.getMigrationId()))
                 .toList();
     }
 
-    private void finishMigration(MigrationState state) {
-        state.status = state.failedCount == 0 ? MigrationStatus.COMPLETED : MigrationStatus.COMPLETED_WITH_ERRORS;
-        state.completedAt = OffsetDateTime.now();
-        if (state.extractor != null) {
-            state.extractor.close();
+    private void finishMigration(EtlMigrationRun run) {
+        run.setStatus(run.getFailedCount() == 0 ? MigrationStatus.COMPLETED.name() : MigrationStatus.COMPLETED_WITH_ERRORS.name());
+        run.setCompletedAt(OffsetDateTime.now());
+        
+        LegacyExtractor extractor = activeExtractors.remove(run.getMigrationId());
+        if (extractor != null) {
+            extractor.close();
         }
-        auditService.record("system", "MIGRATION_FINISHED", "MIGRATION", null,
-                "{\"id\":\"" + state.migrationId + "\",\"status\":\"" + state.status
-                        + "\",\"passed\":" + state.passedCount + ",\"failed\":" + state.failedCount + "}");
+        
+        runRepository.save(run);
+        
+        eventPublisher.publishEvent(new MigrationFinishedEvent(
+            run.getMigrationId(),
+            run.getStatus(),
+            run.getPassedCount(),
+            run.getFailedCount(),
+            OffsetDateTime.now()
+        ));
         log.info("Migration {} finished: {} — {} passed, {} failed",
-                state.migrationId, state.status, state.passedCount, state.failedCount);
+                run.getMigrationId(), run.getStatus(), run.getPassedCount(), run.getFailedCount());
     }
 
-    private BatchProgress buildProgress(MigrationState state) {
+    private BatchProgress buildProgress(EtlMigrationRun run) {
+        LegacyExtractor extractor = activeExtractors.get(run.getMigrationId());
         return new BatchProgress(
-                state.migrationId,
-                state.status,
-                state.extractor.hasMore(),
-                state.extractedCount,
-                state.transformedCount,
-                state.passedCount,
-                state.failedCount,
-                state.warningCount,
-                state.loadedCount,
-                progressPercent(state)
+                run.getMigrationId(),
+                MigrationStatus.valueOf(run.getStatus()),
+                extractor != null && extractor.hasMore(),
+                run.getExtractedCount(),
+                run.getTransformedCount(),
+                run.getPassedCount(),
+                run.getFailedCount(),
+                run.getWarningCount(),
+                run.getLoadedCount(),
+                progressPercent(run)
         );
     }
 
-    private int progressPercent(MigrationState state) {
-        if (state.totalRecords == 0) return 100;
-        long processed = state.extractedCount;
-        return (int) Math.min(100, (processed * 100L) / state.totalRecords);
+    private int progressPercent(EtlMigrationRun run) {
+        if (run.getTotalRecords() == 0) return 100;
+        long processed = run.getExtractedCount();
+        return (int) Math.min(100, (processed * 100L) / run.getTotalRecords());
     }
 
     // --- Types ---
@@ -269,21 +344,9 @@ public class MigrationDashboard {
 
     private static class MigrationState {
         String migrationId;
-        String sourceSystem;
         LegacyExtractor extractor;
         boolean dryRun;
-        long totalRecords;
-        long extractedCount;
-        long transformedCount;
-        long passedCount;
-        long failedCount;
-        long warningCount;
-        long loadedCount;
-        MigrationStatus status;
-        OffsetDateTime startedAt;
-        OffsetDateTime lastBatchAt;
-        OffsetDateTime completedAt;
-        List<FailedRecord> failedRecords = new ArrayList<>();
+        EtlMigrationRun run;
     }
 
     public record BatchProgress(

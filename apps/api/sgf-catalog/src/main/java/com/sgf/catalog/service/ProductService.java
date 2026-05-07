@@ -1,6 +1,5 @@
 package com.sgf.catalog.service;
 
-import com.sgf.audit.service.AuditService;
 import com.sgf.catalog.domain.Product;
 import com.sgf.catalog.domain.ProductPresentation;
 import com.sgf.catalog.domain.ProductRepository;
@@ -9,10 +8,12 @@ import com.sgf.catalog.web.CreateProductRequest;
 import com.sgf.catalog.web.ProductResponse;
 import com.sgf.core.domain.ConflictException;
 import com.sgf.core.domain.NotFoundException;
-import com.sgf.integrations.service.OutboxService;
+import com.sgf.core.event.ProductCreatedEvent;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,13 +21,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProductService {
 
     private final ProductRepository productRepository;
-    private final AuditService auditService;
-    private final OutboxService outboxService;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public ProductService(ProductRepository productRepository, AuditService auditService, OutboxService outboxService) {
+    public ProductService(ProductRepository productRepository, ApplicationEventPublisher eventPublisher) {
         this.productRepository = productRepository;
-        this.auditService = auditService;
-        this.outboxService = outboxService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -53,8 +52,15 @@ public class ProductService {
         product.setPresentations(new ArrayList<>(List.of(presentation)));
 
         Product saved = productRepository.save(product);
-        auditService.record(actor, "PRODUCT_CREATED", "PRODUCT", saved.getId(), "{\"sku\":\"" + saved.getSku() + "\"}");
-        outboxService.enqueue("PRODUCT", saved.getId(), "PRODUCT_CREATED", "{\"sku\":\"" + saved.getSku() + "\"}");
+        
+        eventPublisher.publishEvent(new ProductCreatedEvent(
+            saved.getId(),
+            saved.getGtin(),
+            saved.getCommercialName(),
+            actor,
+            OffsetDateTime.now()
+        ));
+
         return ProductResponse.from(saved);
     }
 
@@ -92,5 +98,18 @@ public class ProductService {
         product.setAlfabetCode(alfabetCode);
         product.setKairosCode(kairosCode);
         return ProductResponse.from(productRepository.save(product));
+    }
+ 
+    @Transactional
+    public void delete(UUID productId) {
+        if (!productRepository.existsById(productId)) {
+            throw new NotFoundException("Product not found");
+        }
+        productRepository.deleteById(productId);
+    }
+ 
+    @Transactional(readOnly = true)
+    public long count() {
+        return productRepository.count();
     }
 }

@@ -1,5 +1,6 @@
 package com.sgf.core.domain;
 
+import com.sgf.core.context.TenantContext;
 import jakarta.persistence.Column;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
@@ -19,12 +20,18 @@ public abstract class BaseEntity {
 
     @Column(nullable = false)
     private OffsetDateTime updatedAt;
+ 
+    @Column(nullable = false)
+    private String tenantId;
 
     @PrePersist
     public void prePersist() {
         OffsetDateTime now = OffsetDateTime.now();
         if (id == null) {
             id = UUID.randomUUID();
+        }
+        if (tenantId == null) {
+            tenantId = TenantContext.getTenantId();
         }
         createdAt = now;
         updatedAt = now;
@@ -57,6 +64,14 @@ public abstract class BaseEntity {
 
     public void setUpdatedAt(OffsetDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+ 
+    public String getTenantId() {
+        return tenantId;
+    }
+ 
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
     }
 }
 

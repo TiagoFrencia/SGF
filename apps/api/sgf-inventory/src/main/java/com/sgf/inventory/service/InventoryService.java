@@ -1,9 +1,10 @@
 package com.sgf.inventory.service;
 
-import com.sgf.audit.service.AuditService;
 import com.sgf.catalog.domain.Product;
 import com.sgf.catalog.service.ProductService;
 import com.sgf.core.domain.ConflictException;
+import com.sgf.core.domain.NotFoundException;
+import com.sgf.core.event.StockUpdatedEvent;
 import com.sgf.inventory.domain.Batch;
 import com.sgf.inventory.domain.BatchRepository;
 import com.sgf.inventory.domain.StockMovement;
@@ -12,11 +13,11 @@ import com.sgf.inventory.domain.StockMovementType;
 import com.sgf.inventory.web.InventoryReceiptRequest;
 import com.sgf.inventory.web.InventoryReceiptResponse;
 import com.sgf.inventory.web.StockViewResponse;
-import com.sgf.integrations.service.OutboxService;
 import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,19 +27,16 @@ public class InventoryService {
     private final BatchRepository batchRepository;
     private final StockMovementRepository stockMovementRepository;
     private final ProductService productService;
-    private final AuditService auditService;
-    private final OutboxService outboxService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public InventoryService(BatchRepository batchRepository,
                             StockMovementRepository stockMovementRepository,
                             ProductService productService,
-                            AuditService auditService,
-                            OutboxService outboxService) {
+                            ApplicationEventPublisher eventPublisher) {
         this.batchRepository = batchRepository;
         this.stockMovementRepository = stockMovementRepository;
         this.productService = productService;
-        this.auditService = auditService;
-        this.outboxService = outboxService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -66,8 +64,16 @@ public class InventoryService {
         movement.setOccurredAt(OffsetDateTime.now());
         stockMovementRepository.save(movement);
 
-        auditService.record(actor, "INVENTORY_RECEIPT_CREATED", "BATCH", saved.getId(), "{\"lot\":\"" + saved.getLotNumber() + "\"}");
-        outboxService.enqueue("BATCH", saved.getId(), "INVENTORY_RECEIPT_CREATED", "{\"lot\":\"" + saved.getLotNumber() + "\"}");
+        eventPublisher.publishEvent(new StockUpdatedEvent(
+            saved.getProduct().getId(),
+            request.quantity(),
+            batchRepository.findByProductIdAndAvailableQuantityGreaterThanAndExpiresAtGreaterThanEqualOrderByExpiresAtAsc(
+                    request.productId(), -1000000, java.time.LocalDate.now().minusYears(100)
+            ).stream().mapToInt(Batch::getAvailableQuantity).sum(),
+            "RECEIPT",
+            actor,
+            OffsetDateTime.now()
+        ));
         return InventoryReceiptResponse.from(saved);
     }
 
@@ -104,6 +110,15 @@ public class InventoryService {
             allocations.add(new BatchAllocation(batch, taken));
             remaining -= taken;
         }
+        int newTotal = available - quantityNeeded;
+        eventPublisher.publishEvent(new StockUpdatedEvent(
+            productId,
+            -quantityNeeded,
+            newTotal,
+            "SALE",
+            "system", // Often automated during sale
+            OffsetDateTime.now()
+        ));
         return allocations;
     }
 

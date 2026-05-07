@@ -26,6 +26,9 @@ public class AuditEvent {
     @Column(nullable = false)
     private OffsetDateTime createdAt;
 
+    private String previousHash;
+    private String hash;
+
     @PrePersist
     public void prePersist() {
         if (id == null) {
@@ -90,6 +93,22 @@ public class AuditEvent {
 
     public void setCreatedAt(OffsetDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getPreviousHash() {
+        return previousHash;
+    }
+
+    public void setPreviousHash(String previousHash) {
+        this.previousHash = previousHash;
+    }
+
+    public String getHash() {
+        return hash;
+    }
+
+    public void setHash(String hash) {
+        this.hash = hash;
     }
 }
 

@@ -1,6 +1,6 @@
 package com.sgf.integrations.anmat.web;
 
-import com.sgf.modules.auth.service.SgfUserPrincipal;
+
 import com.sgf.integrations.anmat.domain.AnmatRemediationStatus;
 import com.sgf.integrations.anmat.service.AnmatHealthResponse;
 import com.sgf.integrations.anmat.service.AnmatTraceabilityService;
@@ -43,8 +43,8 @@ public class AnmatController {
     @PostMapping("/events")
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST')")
     public AnmatTraceabilityEventResponse report(@Valid @RequestBody AnmatTraceabilityEventRequest request,
-                                                 @AuthenticationPrincipal SgfUserPrincipal principal) {
-        return traceabilityService.report(request, principal.getUsername());
+                                                 java.security.Principal principal) {
+        return traceabilityService.report(request, principal.getName());
     }
 
     @GetMapping("/events")
@@ -113,15 +113,15 @@ public class AnmatController {
 
     @PostMapping("/remediation-cases/sync")
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'AUDITOR')")
-    public AnmatRemediationSyncResponse syncRemediationCases(@AuthenticationPrincipal SgfUserPrincipal principal) {
-        return traceabilityService.syncRemediationCases(principal.getUsername());
+    public AnmatRemediationSyncResponse syncRemediationCases(java.security.Principal principal) {
+        return traceabilityService.syncRemediationCases(principal.getName());
     }
 
     @PatchMapping("/remediation-cases/{caseId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'AUDITOR')")
     public AnmatRemediationCaseResponse updateRemediationCase(@PathVariable UUID caseId,
                                                               @Valid @RequestBody AnmatRemediationActionRequest request,
-                                                              @AuthenticationPrincipal SgfUserPrincipal principal) {
-        return traceabilityService.updateRemediationCase(caseId, request, principal.getUsername());
+                                                              java.security.Principal principal) {
+        return traceabilityService.updateRemediationCase(caseId, request, principal.getName());
     }
 }

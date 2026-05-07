@@ -15,52 +15,6 @@ import org.slf4j.LoggerFactory;
  * CUIR format specifications:
  * - Type 1 (Standard): UUID v4-based, prefixed with "CUIR-"
  *   Example: CUIR-a1b2c3d4-e5f6-7890-abcd-ef1234567890
- * - Type 2 (Numeric): 20-digit numeric code with checksum
- *   Format: {timestamp}{random}{checksum}
- *   Example: 20260506123400456abc789
- * - Type 3 (Verifiable): SHA-256 hash of prescription data → base62 encoding
- *
- * The CUIR is generated locally and registered via ReNaPDiS when available.
- * Local CUIRs are valid for offline operation and reconciled on sync.
- */
-public final class CuirGenerator {
-
-    private static final Logger log = LoggerFactory.getLogger(CuirGenerator.class);
-
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-    private static final String CUIR_NAMESPACE = "https://www.argentina.gob.ar/salud/renapdis/cuir";
-    private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-
-    private CuirGenerator() {}
-
-    /**
-     * Generate a standard UUID-based CUIR (Type 1).
-     * Preferred for most prescriptions.
-     */
-    public static Cuir generateStandard() {
-        String uuid = UUID.randomUUID().toString();
-        String cuir = "CUIR-" + uuid;
-        return new Cuir(cuir, CuirType.STANDARD, C
-
-<｜DSML｜tool_calls>
-<｜DSML｜invoke name="write">
-<｜DSML｜parameter name="content" string="true">package com.sgf.integrations.fhir.profiles;
-
-import java.security.SecureRandom;
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-/**
- * Generates CUIR (Código Único de Identificación de Receta) as defined by
- * the Argentine Digital Prescription Law (Ley 27.553).
- *
- * CUIR format specifications:
- * - Type 1 (Standard): UUID v4-based, prefixed with "CUIR-"
- *   Example: CUIR-a1b2c3d4-e5f6-7890-abcd-ef1234567890
  * - Type 2 (Numeric): 18-digit numeric with checksum
  *   Format: {timestamp HHmmss}{date yyyyMMdd}{random 4}{checksum}
  * - Type 3 (Verifiable): SHA-256 hash of prescription data → base62 encoding

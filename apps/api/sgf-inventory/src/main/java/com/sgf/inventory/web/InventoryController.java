@@ -1,12 +1,13 @@
 package com.sgf.inventory.web;
+import org.springframework.http.ResponseEntity;
 
-import com.sgf.modules.auth.service.SgfUserPrincipal;
+
 import com.sgf.inventory.service.InventoryService;
 import jakarta.validation.Valid;
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,8 +26,8 @@ public class InventoryController {
     @PostMapping("/receipts")
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST')")
     public InventoryReceiptResponse receive(@Valid @RequestBody InventoryReceiptRequest request,
-                                            @AuthenticationPrincipal SgfUserPrincipal principal) {
-        return inventoryService.receive(request, principal.getUsername());
+                                            java.security.Principal principal) {
+        return inventoryService.receive(request, principal.getName());
     }
 
     @GetMapping("/stock")

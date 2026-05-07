@@ -1,0 +1,45 @@
+type Query {
+  products(limit: Int): [Product]
+  product(id: ID!): Product
+  inventorySummary: [StockSummary]
+  latestSales(limit: Int): [Sale]
+}
+
+type Product {
+  id: ID!
+  gtin: String
+  sku: String
+  commercialName: String
+  brand: String
+  activeIngredient: String
+  price: Float
+}
+
+type StockSummary {
+  productId: ID!
+  productName: String
+  totalQuantity: Int
+  batches: [Batch]
+}
+
+type Batch {
+  id: ID!
+  lotNumber: String
+  expiresAt: String
+  availableQuantity: Int
+}
+
+type Sale {
+  id: ID!
+  totalAmount: Float
+  soldAt: String
+  status: String
+  items: [SaleItem]
+}
+
+type SaleItem {
+  id: ID!
+  productName: String
+  quantity: Int
+  unitPrice: Float
+}

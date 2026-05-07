@@ -262,12 +262,12 @@ public class DbfExtractor implements LegacyExtractor {
         String[] columns = new String[headers.length];
         for (int i = 0; i < headers.length; i++) {
             String h = headers[i].trim().toLowerCase().replace("\"", "");
-            columns[i] = autoDetect(h);
+            columns[i] = autoDetect(h, i);
         }
         return new ColumnMapping(columns);
     }
 
-    private String autoDetect(String header) {
+    private String autoDetect(String header, int index) {
         return switch (header) {
             case String s when s.contains("codigo") || s.contains("código") || s.contains("id") || s.contains("articulo") -> "id";
             case String s when s.contains("gtin") || s.contains("ean") || s.contains("cod_barra") || s.contains("barras") -> "gtin";
@@ -283,7 +283,7 @@ public class DbfExtractor implements LegacyExtractor {
             case String s when s.contains("marca") || s.contains("laboratorio") || s.contains("lab") || s.contains("brand") -> "brand";
             case String s when s.contains("cuit") || s.contains("proveedor") -> "cuit";
             case String s when s.contains("receta") || s.contains("presc") || s.contains("rx") || s.contains("venta_bajo_receta") -> "rx";
-            default -> "unknown_" + i;
+            default -> "unknown_" + index;
         };
     }
 

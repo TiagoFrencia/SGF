@@ -18,6 +18,15 @@ spring:
     serialization:
       write-dates-as-timestamps: false
 server:
+  port: ${SERVER_PORT:8443}
+  ssl:
+    enabled: ${SERVER_SSL_ENABLED:false}
+    key-store: ${SERVER_SSL_KEYSTORE:}
+    key-store-password: ${SERVER_SSL_KEYSTORE_PASSWORD:}
+    key-store-type: PKCS12
+    key-alias: sgf
+    protocol: TLS
+    enabled-protocols: TLSv1.3
   error:
     include-message: always
 

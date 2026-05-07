@@ -1,6 +1,7 @@
 package com.sgf.integrations.etl;
 
 import com.sgf.audit.service.AuditService;
+import com.sgf.catalog.service.ProductService;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,10 +33,12 @@ public class RollbackService {
     private static final Logger log = LoggerFactory.getLogger(RollbackService.class);
 
     private final AuditService auditService;
+    private final ProductService productService;
     private final ConcurrentMap<String, RollbackPlan> plans = new ConcurrentHashMap<>();
 
-    public RollbackService(AuditService auditService) {
+    public RollbackService(AuditService auditService, ProductService productService) {
         this.auditService = auditService;
+        this.productService = productService;
     }
 
     /**
@@ -100,7 +103,7 @@ public class RollbackService {
 
         for (String productId : plan.loadedIds) {
             try {
-                // In production: call ProductService.delete() with rollback audit
+                productService.delete(UUID.fromString(productId));
                 deleted++;
             } catch (Exception e) {
                 failed++;

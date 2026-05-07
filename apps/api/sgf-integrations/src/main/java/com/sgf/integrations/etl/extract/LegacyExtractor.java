@@ -1,4 +1,7 @@
-package com.sgf.integrations.etl;
+package com.sgf.integrations.etl.extract;
+
+import com.sgf.integrations.etl.LegacyProductRecord;
+
 
 /**
  * Common interface for all legacy system extractors.
