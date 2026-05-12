@@ -7,7 +7,7 @@ plugins {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
@@ -41,6 +41,15 @@ dependencies {
     // FHIR
     implementation 'ca.uhn.hapi.fhir:hapi-fhir-client:7.0.2'
     implementation 'ca.uhn.hapi.fhir:hapi-fhir-structures-r4:7.0.2'
+
+    // SOAP / Web Services (PAMI SIAFAR)
+    implementation 'org.springframework.boot:spring-boot-starter-web-services'
+    implementation 'jakarta.xml.ws:jakarta.xml.ws-api:4.0.1'
+    implementation 'com.sun.xml.ws:jaxws-rt:4.0.2'
+    
+    // JAXB for XML mapping
+    implementation 'jakarta.xml.bind:jakarta.xml.bind-api:4.0.1'
+    runtimeOnly 'com.sun.xml.bind:jaxb-impl:4.0.4'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.junit.jupiter:junit-jupiter'

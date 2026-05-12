@@ -3,6 +3,7 @@ package com.sgf.inventory.web;
 import com.sgf.inventory.domain.BranchTransfer;
 import com.sgf.inventory.domain.BranchTransfer.TransferStatus;
 import com.sgf.inventory.service.BranchTransferService;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
@@ -26,44 +27,48 @@ public class BranchTransferController {
     }
 
     @PostMapping
-    public ResponseEntity<BranchTransfer> create(@RequestBody CreateTransferRequest request) {
-        return ResponseEntity.ok(transferService.create(
+    public ResponseEntity<BranchTransferResponse> create(@RequestBody CreateTransferRequest request) {
+        return ResponseEntity.ok(BranchTransferResponse.from(transferService.create(
                 request.sourceBranchId(), request.destinationBranchId(),
                 request.productId(), request.batchId(), request.quantity(),
                 request.notes(), "current-user" // TODO: extract from JWT
-        ));
+        )));
     }
 
     @PatchMapping("/{id}/ship")
-    public ResponseEntity<BranchTransfer> ship(@PathVariable UUID id, @RequestBody BranchActionRequest request) {
-        return ResponseEntity.ok(transferService.ship(id, request.branchId(), "current-user"));
+    public ResponseEntity<BranchTransferResponse> ship(@PathVariable("id") UUID id, @RequestBody BranchActionRequest request) {
+        return ResponseEntity.ok(BranchTransferResponse.from(transferService.ship(id, request.branchId(), "current-user")));
     }
 
     @PatchMapping("/{id}/receive")
-    public ResponseEntity<BranchTransfer> receive(@PathVariable UUID id, @RequestBody ReceiveRequest request) {
-        return ResponseEntity.ok(transferService.receive(id, request.branchId(), request.receivedQuantity(), "current-user"));
+    public ResponseEntity<BranchTransferResponse> receive(@PathVariable("id") UUID id, @RequestBody ReceiveRequest request) {
+        return ResponseEntity.ok(BranchTransferResponse.from(transferService.receive(id, request.branchId(), request.receivedQuantity(), "current-user")));
     }
 
     @PatchMapping("/{id}/cancel")
-    public ResponseEntity<BranchTransfer> cancel(@PathVariable UUID id, @RequestBody BranchActionRequest request) {
-        return ResponseEntity.ok(transferService.cancel(id, request.branchId(), "current-user"));
+    public ResponseEntity<BranchTransferResponse> cancel(@PathVariable("id") UUID id, @RequestBody BranchActionRequest request) {
+        return ResponseEntity.ok(BranchTransferResponse.from(transferService.cancel(id, request.branchId(), "current-user")));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BranchTransfer> get(@PathVariable UUID id) {
-        return ResponseEntity.ok(transferService.findById(id));
+    public ResponseEntity<BranchTransferResponse> get(@PathVariable("id") UUID id) {
+        return ResponseEntity.ok(BranchTransferResponse.from(transferService.findById(id)));
     }
 
     @GetMapping
-    public ResponseEntity<List<BranchTransfer>> list(
-            @RequestParam(required = false) UUID sourceBranchId,
-            @RequestParam(required = false) UUID destinationBranchId,
-            @RequestParam(required = false) TransferStatus status) {
+    public ResponseEntity<List<BranchTransferResponse>> list(
+            @RequestParam(name = "sourceBranchId", required = false) UUID sourceBranchId,
+            @RequestParam(name = "destinationBranchId", required = false) UUID destinationBranchId,
+            @RequestParam(name = "status", required = false) TransferStatus status) {
         if (sourceBranchId != null) {
-            return ResponseEntity.ok(transferService.listBySourceBranch(sourceBranchId, status));
+            return ResponseEntity.ok(transferService.listBySourceBranch(sourceBranchId, status).stream()
+                    .map(BranchTransferResponse::from)
+                    .toList());
         }
         if (destinationBranchId != null) {
-            return ResponseEntity.ok(transferService.listByDestinationBranch(destinationBranchId, status));
+            return ResponseEntity.ok(transferService.listByDestinationBranch(destinationBranchId, status).stream()
+                    .map(BranchTransferResponse::from)
+                    .toList());
         }
         return ResponseEntity.ok(List.of());
     }
@@ -80,4 +85,38 @@ public class BranchTransferController {
     public record BranchActionRequest(UUID branchId) {}
 
     public record ReceiveRequest(UUID branchId, Integer receivedQuantity) {}
+
+    public record BranchTransferResponse(
+            UUID id,
+            UUID sourceBranchId,
+            UUID destinationBranchId,
+            UUID productId,
+            String productName,
+            UUID batchId,
+            String lotNumber,
+            int quantity,
+            Integer receivedQuantity,
+            TransferStatus status,
+            String notes,
+            OffsetDateTime shippedAt,
+            OffsetDateTime receivedAt
+    ) {
+        public static BranchTransferResponse from(BranchTransfer transfer) {
+            return new BranchTransferResponse(
+                    transfer.getId(),
+                    transfer.getSourceBranchId(),
+                    transfer.getDestinationBranchId(),
+                    transfer.getProduct().getId(),
+                    transfer.getProduct().getCommercialName(),
+                    transfer.getBatch().getId(),
+                    transfer.getBatch().getLotNumber(),
+                    transfer.getQuantity(),
+                    transfer.getReceivedQuantity(),
+                    transfer.getStatus(),
+                    transfer.getNotes(),
+                    transfer.getShippedAt(),
+                    transfer.getReceivedAt()
+            );
+        }
+    }
 }

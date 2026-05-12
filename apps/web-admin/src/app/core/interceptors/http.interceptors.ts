@@ -58,9 +58,9 @@ function handle401Error(
     }).pipe(
       switchMap((response: any) => {
         isRefreshing = false;
-        refreshTokenSubject.next(response.token);
+        refreshTokenSubject.next(response.accessToken);
         
-        return next(addToken(request, response.token));
+        return next(addToken(request, response.accessToken));
       }),
       catchError((refreshError) => {
         isRefreshing = false;

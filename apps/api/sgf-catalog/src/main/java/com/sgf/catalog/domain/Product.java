@@ -6,6 +6,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,6 +25,14 @@ public class Product extends BaseEntity {
 
     private String brand;
     private String activeIngredient;
+    private String laboratory;
+    private String laboratoryCode;
+    private String snomedCode;
+    private String troquel;
+    private String barcode;
+    private String source;
+    private String sourceRecordKey;
+    private LocalDate sourceUpdatedAt;
 
     @Column(nullable = false)
     private boolean prescriptionRequired;
@@ -74,6 +83,70 @@ public class Product extends BaseEntity {
 
     public void setActiveIngredient(String activeIngredient) {
         this.activeIngredient = activeIngredient;
+    }
+
+    public String getLaboratory() {
+        return laboratory;
+    }
+
+    public void setLaboratory(String laboratory) {
+        this.laboratory = laboratory;
+    }
+
+    public String getLaboratoryCode() {
+        return laboratoryCode;
+    }
+
+    public void setLaboratoryCode(String laboratoryCode) {
+        this.laboratoryCode = laboratoryCode;
+    }
+
+    public String getSnomedCode() {
+        return snomedCode;
+    }
+
+    public void setSnomedCode(String snomedCode) {
+        this.snomedCode = snomedCode;
+    }
+
+    public String getTroquel() {
+        return troquel;
+    }
+
+    public void setTroquel(String troquel) {
+        this.troquel = troquel;
+    }
+
+    public String getBarcode() {
+        return barcode;
+    }
+
+    public void setBarcode(String barcode) {
+        this.barcode = barcode;
+    }
+
+    public String getSource() {
+        return source;
+    }
+
+    public void setSource(String source) {
+        this.source = source;
+    }
+
+    public String getSourceRecordKey() {
+        return sourceRecordKey;
+    }
+
+    public void setSourceRecordKey(String sourceRecordKey) {
+        this.sourceRecordKey = sourceRecordKey;
+    }
+
+    public LocalDate getSourceUpdatedAt() {
+        return sourceUpdatedAt;
+    }
+
+    public void setSourceUpdatedAt(LocalDate sourceUpdatedAt) {
+        this.sourceUpdatedAt = sourceUpdatedAt;
     }
 
     public boolean isPrescriptionRequired() {

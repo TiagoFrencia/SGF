@@ -5,6 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "app.afip")
 public record AfipProperties(
         boolean enabled,
+        boolean autoInvoiceEnabled,
         AfipMode mode,
         AfipWsEnvironment wsEnvironment,
         String cuit,

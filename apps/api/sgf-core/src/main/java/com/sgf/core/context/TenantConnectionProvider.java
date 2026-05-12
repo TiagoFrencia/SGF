@@ -10,7 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.datasource.ConnectionProxy;
 import org.springframework.jdbc.datasource.DelegatingDataSource;
-import org.springframework.stereotype.Component;
 
 /**
  * Datasource wrapper that sets the PostgreSQL session variable `app.tenant_id`
@@ -18,7 +17,6 @@ import org.springframework.stereotype.Component;
  *
  * This is transparent to the application layer — JPA and JDBC code need no changes.
  */
-@Component
 public class TenantConnectionProvider extends DelegatingDataSource {
 
     private static final Logger log = LoggerFactory.getLogger(TenantConnectionProvider.class);

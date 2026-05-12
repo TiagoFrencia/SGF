@@ -55,21 +55,21 @@ public class AnmatController {
 
     @GetMapping("/events/by-gtin")
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'AUDITOR')")
-    public List<AnmatTraceabilityEventResponse> byGtin(@RequestParam String gtin) {
+    public List<AnmatTraceabilityEventResponse> byGtin(@RequestParam("gtin") String gtin) {
         return traceabilityService.findByGtin(gtin);
     }
 
     @GetMapping("/events/by-lot")
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'AUDITOR')")
-    public List<AnmatTraceabilityEventResponse> byLot(@RequestParam String gtin,
-                                                      @RequestParam String lotNumber) {
+    public List<AnmatTraceabilityEventResponse> byLot(@RequestParam("gtin") String gtin,
+                                                      @RequestParam("lotNumber") String lotNumber) {
         return traceabilityService.findByGtinAndLot(gtin, lotNumber);
     }
 
     @GetMapping("/serial-summary")
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'AUDITOR')")
-    public AnmatTraceabilitySerialSummaryResponse serialSummary(@RequestParam String gtin,
-                                                                @RequestParam String serialNumber) {
+    public AnmatTraceabilitySerialSummaryResponse serialSummary(@RequestParam("gtin") String gtin,
+                                                                @RequestParam("serialNumber") String serialNumber) {
         return traceabilityService.serialSummary(gtin, serialNumber);
     }
 
@@ -87,16 +87,16 @@ public class AnmatController {
 
     @GetMapping("/remediation-cases")
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'AUDITOR')")
-    public AnmatRemediationCasePageResponse remediationCases(@RequestParam(required = false) AnmatRemediationStatus status,
-                                                             @RequestParam(required = false) String assignedTo,
-                                                             @RequestParam(required = false) String severity,
-                                                             @RequestParam(required = false) String issueCode,
-                                                             @RequestParam(required = false) String gtin,
-                                                             @RequestParam(required = false) String serialNumber,
-                                                             @RequestParam(defaultValue = "0") int page,
-                                                             @RequestParam(defaultValue = "20") int size,
-                                                             @RequestParam(defaultValue = "updatedAt") String sortBy,
-                                                             @RequestParam(defaultValue = "DESC") String sortDirection) {
+    public AnmatRemediationCasePageResponse remediationCases(@RequestParam(name = "status", required = false) AnmatRemediationStatus status,
+                                                             @RequestParam(name = "assignedTo", required = false) String assignedTo,
+                                                             @RequestParam(name = "severity", required = false) String severity,
+                                                             @RequestParam(name = "issueCode", required = false) String issueCode,
+                                                             @RequestParam(name = "gtin", required = false) String gtin,
+                                                             @RequestParam(name = "serialNumber", required = false) String serialNumber,
+                                                             @RequestParam(name = "page", defaultValue = "0") int page,
+                                                             @RequestParam(name = "size", defaultValue = "20") int size,
+                                                             @RequestParam(name = "sortBy", defaultValue = "updatedAt") String sortBy,
+                                                             @RequestParam(name = "sortDirection", defaultValue = "DESC") String sortDirection) {
         return traceabilityService.remediationCases(
                 status,
                 assignedTo,
@@ -119,7 +119,7 @@ public class AnmatController {
 
     @PatchMapping("/remediation-cases/{caseId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'AUDITOR')")
-    public AnmatRemediationCaseResponse updateRemediationCase(@PathVariable UUID caseId,
+    public AnmatRemediationCaseResponse updateRemediationCase(@PathVariable("caseId") UUID caseId,
                                                               @Valid @RequestBody AnmatRemediationActionRequest request,
                                                               java.security.Principal principal) {
         return traceabilityService.updateRemediationCase(caseId, request, principal.getName());

@@ -11,8 +11,16 @@ import java.util.UUID;
 
 public record CreateSaleRequest(
         @NotBlank String idempotencyKey,
-        @NotEmpty List<@Valid SaleLineRequest> items
+        @NotEmpty List<@Valid SaleLineRequest> items,
+        String pamiPrescriptionId,
+        String pamiBeneficiaryId,
+        String doctorLicense,
+        String doctorRegion
 ) {
+    public CreateSaleRequest(String idempotencyKey, List<@Valid SaleLineRequest> items) {
+        this(idempotencyKey, items, null, null, null, null);
+    }
+
     public record SaleLineRequest(
             @NotNull UUID productId,
             @Min(value = 1, message = "quantity must be positive") Integer quantity,
@@ -20,4 +28,3 @@ public record CreateSaleRequest(
     ) {
     }
 }
-

@@ -1,175 +1,294 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { FormsModule } from '@angular/forms';
+import { MatSelectModule } from '@angular/material/select';
 import { TableModule } from 'primeng/table';
+import {
+  POSService,
+  PosOrder,
+  SaleCompletedResponse,
+  TerminalRecoveryResponse
+} from '../../../core/services/pos.service';
+import { Product } from '../../../core/services/product.service';
+
+interface TerminalBranchOption {
+  id: string;
+  label: string;
+}
 
 @Component({
   selector: 'app-pos',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, MatInputModule, MatFormFieldModule, FormsModule, TableModule],
-  template: `
-    <div class="dashboard-container flex gap-6">
-      <!-- Search & Cart -->
-      <div class="flex-grow">
-        <mat-card class="glass-card mb-6">
-          <mat-card-content class="p-4">
-            <div class="flex gap-4 items-center">
-              <mat-form-field appearance="outline" class="flex-grow">
-                <mat-label>Escanear código o buscar producto (F1)</mat-label>
-                <input matInput placeholder="GTIN, SKU o Nombre" [(ngModel)]="searchQuery" (keyup.enter)="addToCart()">
-                <mat-icon matSuffix>search</mat-icon>
-              </mat-form-field>
-              <button mat-raised-button color="primary" (click)="addToCart()" class="h-14">AGREGAR</button>
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-card class="glass-card flex-grow overflow-hidden">
-          <p-table [value]="cartItems" class="p-datatable-sm">
-            <ng-template pTemplate="header">
-              <tr>
-                <th>Producto</th>
-                <th>Cant.</th>
-                <th>Precio</th>
-                <th>Subtotal</th>
-                <th></th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-item let-index="rowIndex">
-              <tr>
-                <td>
-                  <div class="font-bold">{{item.name}}</div>
-                  <div class="text-xs text-slate-500">GTIN: {{item.gtin}}</div>
-                </td>
-                <td style="width: 100px">
-                  <input type="number" [(ngModel)]="item.quantity" class="w-16 p-1 border rounded" (change)="calculateTotal()">
-                </td>
-                <td>${{item.price | number:'1.2-2'}}</td>
-                <td class="font-bold">${{item.price * item.quantity | number:'1.2-2'}}</td>
-                <td>
-                  <button mat-icon-button color="warn" (click)="removeItem(index)">
-                    <mat-icon>delete</mat-icon>
-                  </button>
-                </td>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="emptymessage">
-              <tr>
-                <td colspan="5" class="text-center p-8 text-slate-400">
-                  El carrito está vacío. Empiece a escanear productos.
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
-        </mat-card>
-      </div>
-
-      <!-- Checkout Sidebar -->
-      <div class="w-96 flex flex-col gap-6">
-        <mat-card class="glass-card">
-          <mat-card-header>
-            <mat-card-title>Resumen de Venta</mat-card-title>
-          </mat-card-header>
-          <mat-card-content class="p-6">
-            <div class="flex justify-between mb-2">
-              <span>Subtotal:</span>
-              <span>${{subtotal | number:'1.2-2'}}</span>
-            </div>
-            <div class="flex justify-between mb-4 text-green-600">
-              <span>Cobertura Obra Social:</span>
-              <span>-${{coverage | number:'1.2-2'}}</span>
-            </div>
-            <div class="border-t pt-4 flex justify-between items-center">
-              <span class="text-xl font-bold">TOTAL:</span>
-              <span class="text-3xl font-bold text-blue-700">${{total | number:'1.2-2'}}</span>
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-card class="glass-card">
-          <mat-card-content class="p-4 flex flex-col gap-3">
-            <button mat-raised-button color="accent" class="w-full h-12" (click)="validateInsurance()">
-              <mat-icon>verified_user</mat-icon> VALIDAR OBRA SOCIAL (F4)
-            </button>
-            <button mat-raised-button color="primary" class="w-full h-16 text-lg" [disabled]="cartItems.length === 0">
-              <mat-icon>payments</mat-icon> COBRAR (F12)
-            </button>
-          </mat-card-content>
-        </mat-card>
-
-        <div class="shortcuts text-xs text-slate-500 p-2">
-          <p>F1: Buscar | F4: Validar | F12: Cobrar | ESC: Limpiar</p>
-        </div>
-      </div>
-    </div>
-  `,
-  styles: [`
-    .h-14 { height: 3.5rem; }
-    .h-12 { height: 3rem; }
-    .h-16 { height: 4rem; }
-    .w-96 { width: 24rem; }
-    .w-16 { width: 4rem; }
-    .gap-4 { gap: 1rem; }
-    .p-8 { padding: 2rem; }
-    .border-t { border-top: 1px solid #e2e8f0; }
-    .text-xl { font-size: 1.25rem; }
-    .text-lg { font-size: 1.125rem; }
-    .text-blue-700 { color: #1d4ed8; }
-  `]
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatCardModule,
+    MatIconModule,
+    MatButtonModule,
+    MatInputModule,
+    MatFormFieldModule,
+    MatSelectModule,
+    TableModule
+  ],
+  templateUrl: './pos.component.html',
+  styleUrl: './pos.component.scss'
 })
-export class PosComponent {
+export class PosComponent implements OnInit {
+  readonly branches: TerminalBranchOption[] = [
+    { id: '00000000-0000-0000-0000-000000000101', label: 'Sucursal Central Operativa' },
+    { id: '00000000-0000-0000-0000-000000000202', label: 'Sucursal Norte Operativa' }
+  ];
+
   searchQuery = '';
-  cartItems: any[] = [];
-  subtotal = 0;
-  coverage = 0;
-  total = 0;
+  unitPrice = 0;
+  searchResults: Product[] = [];
+  currentOrder: PosOrder | null = null;
+  terminalOrders: PosOrder[] = [];
+  completedSale: SaleCompletedResponse | null = null;
+  recoveryState: TerminalRecoveryResponse | null = null;
+  errorMessage = '';
+  successMessage = '';
+  activeTerminalId = '';
+  activeBranchId = '';
+  readonly receiveQuantityByOrder = new Map<string, number>();
+
+  constructor(private posService: POSService) {}
+
+  ngOnInit(): void {
+    this.activeTerminalId = this.posService.defaultTerminalId;
+    this.activeBranchId = this.posService.defaultBranchId;
+    this.reloadTerminalState();
+  }
 
   @HostListener('window:keydown', ['$event'])
-  handleKeyboardEvent(event: KeyboardEvent) {
+  handleKeyboardEvent(event: KeyboardEvent): void {
     if (event.key === 'F12') {
       event.preventDefault();
-      // handle checkout
-    }
-    if (event.key === 'F4') {
-      event.preventDefault();
-      this.validateInsurance();
+      this.completeOrder();
     }
   }
 
-  addToCart() {
-    if (!this.searchQuery) return;
-    
-    // Simulate finding product
-    this.cartItems.push({
-      gtin: '7791234' + Math.floor(Math.random() * 1000),
-      name: 'PRODUCTO SIMULADO ' + (this.cartItems.length + 1),
-      quantity: 1,
-      price: Math.random() * 1000 + 500
+  searchProducts(): void {
+    this.errorMessage = '';
+    this.successMessage = '';
+    this.completedSale = null;
+    const query = this.searchQuery.trim();
+    if (!query) {
+      return;
+    }
+    this.posService.searchProducts(query).subscribe({
+      next: (results) => {
+        this.searchResults = results;
+        if (results.length === 1) {
+          this.addProduct(results[0]);
+        } else if (results.length === 0) {
+          this.errorMessage = 'No se encontraron productos.';
+        }
+      },
+      error: (error) => {
+        this.errorMessage = error.userMessage || 'No se pudo buscar productos.';
+      }
     });
-    
-    this.searchQuery = '';
-    this.calculateTotal();
   }
 
-  removeItem(index: number) {
-    this.cartItems.splice(index, 1);
-    this.calculateTotal();
+  addProduct(product: Product): void {
+    this.ensureDraftOrder(() => {
+      if (!this.currentOrder) {
+        return;
+      }
+      const requestedPrice = this.unitPrice > 0 ? this.unitPrice : null;
+      const addCall = /^\d{8,14}$/.test(this.searchQuery.trim())
+        ? this.posService.scanAdd(this.currentOrder.orderId, product.gtin, 1, requestedPrice)
+        : this.posService.addItem(this.currentOrder.orderId, product.id, 1, requestedPrice);
+
+      addCall.subscribe({
+        next: (order) => {
+          this.currentOrder = order;
+          this.searchResults = [];
+          this.searchQuery = '';
+          this.successMessage = product.commercialName + ' agregado a la orden'
+            + (requestedPrice ? ' con precio manual.' : ' con precio vigente CNPM si estaba disponible.');
+        },
+        error: (error) => {
+          this.errorMessage = error.userMessage || 'No se pudo agregar el producto.';
+        }
+      });
+    });
   }
 
-  calculateTotal() {
-    this.subtotal = this.cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-    this.total = this.subtotal - this.coverage;
+  markReady(): void {
+    if (!this.currentOrder) {
+      return;
+    }
+    this.posService.markReady(this.currentOrder.orderId).subscribe({
+      next: (order) => {
+        this.currentOrder = order;
+        this.successMessage = 'Orden lista para cobrar.';
+      },
+      error: (error) => {
+        this.errorMessage = error.userMessage || 'No se pudo marcar la orden como ready.';
+      }
+    });
   }
 
-  validateInsurance() {
-    // Simulate ADESFA validation
-    this.coverage = this.subtotal * 0.4;
-    this.calculateTotal();
-    alert('Validación Exitosa (OSDE 40%)');
+  completeOrder(): void {
+    if (!this.currentOrder) {
+      return;
+    }
+    this.posService.completeOrder(this.currentOrder.orderId, {
+      paymentMethod: 'CASH',
+      idempotencyKey: 'web-admin-' + this.currentOrder.orderId
+    }).subscribe({
+      next: (sale) => {
+        this.completedSale = sale;
+        this.successMessage = 'Venta ' + sale.saleId + ' registrada correctamente.';
+        this.reloadTerminalState();
+      },
+      error: (error) => {
+        this.errorMessage = error.userMessage || 'No se pudo completar la orden.';
+      }
+    });
+  }
+
+  newTerminalOrder(): void {
+    this.errorMessage = '';
+    this.successMessage = '';
+    this.completedSale = null;
+    this.posService.createTerminalOrder(this.activeTerminalId, {
+      branchId: this.activeBranchId,
+      notes: 'web-admin-terminal'
+    }).subscribe({
+      next: (order) => {
+        this.currentOrder = order;
+        this.successMessage = 'Nueva orden abierta en ' + this.activeTerminalId + '.';
+        this.reloadTerminalOrders();
+      },
+      error: (error) => {
+        this.errorMessage = error.userMessage || 'No se pudo abrir una nueva orden.';
+      }
+    });
+  }
+
+  switchOrder(orderId: string): void {
+    this.posService.switchTerminalOrder(this.activeTerminalId, orderId).subscribe({
+      next: (order) => {
+        this.currentOrder = order;
+        this.successMessage = 'Orden activa actualizada.';
+        this.reloadTerminalOrders();
+      },
+      error: (error) => {
+        this.errorMessage = error.userMessage || 'No se pudo cambiar la orden activa.';
+      }
+    });
+  }
+
+  recoverTerminal(): void {
+    this.posService.recoverTerminal(this.activeTerminalId, this.activeBranchId).subscribe({
+      next: (recovery) => {
+        this.recoveryState = recovery;
+        this.successMessage = 'Terminal recuperada con ' + recovery.recoveredOrders + ' orden(es).';
+        this.reloadTerminalState();
+      },
+      error: (error) => {
+        this.errorMessage = error.userMessage || 'No se pudo recuperar la terminal.';
+      }
+    });
+  }
+
+  closeTerminal(): void {
+    this.posService.closeTerminal(this.activeTerminalId).subscribe({
+      next: () => {
+        this.currentOrder = null;
+        this.terminalOrders = [];
+        this.recoveryState = null;
+        this.successMessage = 'Terminal cerrada y liberada.';
+      },
+      error: (error) => {
+        this.errorMessage = error.userMessage || 'No se pudo cerrar la terminal.';
+      }
+    });
+  }
+
+  removeOrder(orderId: string): void {
+    this.posService.removeTerminalOrder(this.activeTerminalId, orderId).subscribe({
+      next: () => {
+        this.successMessage = 'Orden removida de la terminal.';
+        if (this.currentOrder?.orderId === orderId) {
+          this.currentOrder = null;
+        }
+        this.reloadTerminalState();
+      },
+      error: (error) => {
+        this.errorMessage = error.userMessage || 'No se pudo remover la orden.';
+      }
+    });
+  }
+
+  onTerminalContextChange(): void {
+    this.currentOrder = null;
+    this.terminalOrders = [];
+    this.completedSale = null;
+    this.recoveryState = null;
+    this.reloadTerminalState();
+  }
+
+  isActiveOrder(orderId: string): boolean {
+    return this.currentOrder?.orderId === orderId;
+  }
+
+  countByStatus(status: PosOrder['status']): number {
+    return this.terminalOrders.filter((order) => order.status === status).length;
+  }
+
+  ordersByStatus(status: PosOrder['status']): PosOrder[] {
+    return this.terminalOrders.filter((order) => order.status === status);
+  }
+
+  private ensureDraftOrder(callback: () => void): void {
+    if (this.currentOrder) {
+      callback();
+      return;
+    }
+    this.posService.createTerminalOrder(this.activeTerminalId, {
+      branchId: this.activeBranchId,
+      notes: 'web-admin'
+    }).subscribe({
+      next: (order) => {
+        this.currentOrder = order;
+        this.reloadTerminalOrders();
+        callback();
+      },
+      error: (error) => {
+        this.errorMessage = error.userMessage || 'No se pudo crear la orden POS.';
+      }
+    });
+  }
+
+  private reloadTerminalState(): void {
+    this.reloadTerminalOrders();
+    this.posService.getTerminalActiveOrder(this.activeTerminalId).subscribe({
+      next: (order) => {
+        this.currentOrder = order;
+      },
+      error: () => {
+        this.currentOrder = null;
+      }
+    });
+  }
+
+  private reloadTerminalOrders(): void {
+    this.posService.listTerminalOrders(this.activeTerminalId).subscribe({
+      next: (orders) => {
+        this.terminalOrders = orders;
+      },
+      error: () => {
+        this.terminalOrders = [];
+      }
+    });
   }
 }

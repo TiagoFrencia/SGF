@@ -1,196 +1,173 @@
-# 🗺️ Roadmap Detallado: Sistema de Gestión Farmacéutica (SGF) - Argentina
-## Arquitectura Empresarial para Desarrollador Único
+# Roadmap SGF
 
-> **Objetivo**: Desarrollar un SGF escalable, regulatorio-compliant y AI-ready, desde 0 a 100%, comercializable en el mercado argentino.
+Documento estrategico de mediano y largo plazo.
 
----
-
-## 📋 Resumen Ejecutivo
-
-| Parámetro | Recomendación |
-|-----------|--------------|
-| **Tiempo estimado MVP** | 6-8 meses (dedicación full-time) |
-| **Tiempo estimado 100%** | 18-24 meses |
-| **Stack principal** | Java 17+ / Spring Boot 3.x / PostgreSQL 15+ / Angular 17+ |
-| **Arquitectura** | Modular Monolith → Microservicios (evolutiva) |
-| **Infraestructura** | Docker + Kubernetes (local) / Cloud (producción) |
-| **Prioridad regulatoria** | AFIP → ANMAT → ADESFA → ReNaPDiS |
+**Importante:** este roadmap no describe por si solo el estado ejecutado del repo. Para el estado real auditado usar [[MASTER_PLAN]]. Para el bloqueo tecnico actual y los proximos pasos operativos usar tambien [[00_DASHBOARD]].
 
 ---
 
-## 🛠️ Stack Tecnológico
+## Objetivo
 
-### Backend (Core)
-```yaml
-Lenguaje: Java 17+ (LTS, soporte enterprise)
-Framework: Spring Boot 3.2+ con Spring Cloud
-Persistencia:
- - PostgreSQL 15+ (principal)
- - Redis 7+ (caché y sesiones)
- - TimescaleDB (métricas temporales para IA)
-API: REST + GraphQL (para consultas complejas)
-Mensajería: Apache Kafka o RabbitMQ (sincronización offline)
-Autenticación: Spring Security + JWT + OAuth2
-Documentación: OpenAPI 3.0 + SpringDoc
-```
+Evolucionar SGF desde su base actual de monolito modular enterprise-ready hacia una plataforma farmaceutica mas interoperable, endurecida y comercializable para el mercado argentino.
 
-### Frontend
-```yaml
-Web Admin: Angular 17+ (TypeScript, componentes enterprise)
-POS Terminal: Electron + Angular (offline-first nativo)
-Móvil (futuro): Flutter (multiplataforma)
-UI Library: Angular Material + PrimeNG
-```
+## Foto de partida
 
-### Infraestructura & DevOps
-```yaml
-Contenedores: Docker + Docker Compose (desarrollo)
-Orquestación: Kubernetes (producción) / Minikube (testing)
-CI/CD: GitHub Actions o GitLab CI
-Monitoreo: Prometheus + Grafana + ELK Stack
-Logs: Structured logging con Correlation IDs
-```
+Al momento de esta revision, SGF ya cuenta con:
+
+- backend modular Spring Boot
+- frontend Angular 17
+- inventario, POS, auditoria y sync base
+- AFIP, ANMAT y ADESFA iniciados con bastante profundidad
+- catalogo/Vademecum publico CNPM/MSal ya incorporado como primera fuente real de medicamentos para prototipo
+- ETL, OCR y AI operativa en estado base/parcial
+- infraestructura K8s y monitoreo base
+
+Las fases siguientes deben leerse como **expansion, cierre productivo y endurecimiento**, no como un proyecto arrancando desde cero.
 
 ---
 
-## 🗓️ Roadmap por Fases
+## Principios del roadmap
 
-### 🟢 FASE 1: Cimientos Arquitectónicos (Meses 1-2)
-**Objetivo**: Base técnica sólida, offline-first y estructura de datos AI-ready
-
-**Tareas clave:**
-1. Inicialización del proyecto con estructura modular
-2. Diseño de base de datos AI-Ready con features para ML
-3. Motor Offline-First con patrón CQRS
-4. Seguridad base: pgcrypto, TLS 1.3, RBAC
-
-**Entregables:**
-- [x] Repositorio con arquitectura modular documentada
-- [x] Esquema de base de datos normalizado (3FN+) con extensiones AI
-- [x] Prototipo funcional offline: CRUD de productos + venta local
-- [x] Sistema de autenticación + auditoría básica
+1. **Mantener modular monolith first** mientras el costo de coordinacion de microservicios no se justifique.
+2. **Cerrar gaps productivos** antes de agregar mas superficie aspiracional.
+3. **Priorizar integracion regulatoria real** por encima de features cosmeticas.
+4. **Construir sobre evidencia de operacion**: tests, observabilidad y runbooks.
+5. **Separar claramente base tecnica vs capacidad productiva validada**.
 
 ---
 
-### 🔵 FASE 2: Módulos Core Operativos (Meses 3-5)
-**Objetivo**: Funcionalidad comercial completa para farmacia operativa
+## Fases estrategicas
 
-**Módulos:**
-1. **Gestión de Inventario Farmacéutico** - lotes, vencimientos, alertas, punto de reorden
-2. **Punto de Venta (POS)** - máximo 3 clics, múltiples órdenes, atajos de teclado
-3. **Integración de Vademécums** - AlfaBeta, Kairos, sugerencias de genéricos
+### Fase A. Cierre operativo del baseline
 
-**Entregables:**
-- [x] Módulo de inventario con gestión de lotes/vencimientos
-- [x] POS funcional con soporte offline y múltiples órdenes
-- [x] Integración con AlfaBeta/Kairos (sandbox/testing)
-- [x] Sistema de alertas de stock y vencimientos
+**Meta:** convertir la base actual en una plataforma internamente consistente y mas verificable.
 
----
+#### Prioridades
 
-### 🟡 FASE 3: Integraciones Regulatorias Críticas (Meses 6-9)
-**Objetivo**: Cumplimiento normativo argentino para operación legal
+- ampliar cobertura E2E del circuito POS -> AFIP/ANMAT/ADESFA
+- consolidar documentacion operativa y runbooks
+- reducir drift entre codigo y documentacion
+- cerrar el baseline del backend antes de mas expansion funcional
 
-**Integraciones:**
-1. **AFIP - Facturación Electrónica** (WSAA + WSFEv1, certificados X.509, CAE)
-2. **ANMAT - Sistema Nacional de Trazabilidad** (DataMatrix, GLN/GTIN, eventos)
-3. **ADESFA 3.1.0** (validación obras sociales: PAMI, OSDE, Swiss Medical)
+#### Estado actual
 
-**Entregables:**
-- [x] Módulo AFIP funcional en modo sandbox + producción
-- [x] Integración ANMAT para productos trazables (DataMatrix)
-- [x] Motor ADESFA para al menos 3 validadores principales
-- [x] Sistema de auditoría regulatoria (logs inmutables)
+`En progreso avanzado`
 
----
+La base existe y avanzo fuerte en harness, migraciones y wiring comun, pero todavia falta cerrar por completo `integrationTest`.
 
-### 🟠 FASE 4: Migración de Datos Legados & ETL (Meses 10-12)
-**Objetivo**: Permitir adopción por farmacias con sistemas existentes
+### Fase B. Interoperabilidad sanitaria real
 
-**Componentes:**
-- Pipeline ETL configurable (FarmaWin, Nixfarma, genérico DBF)
-- Shadowing: ejecución paralela 2-4 semanas
-- Rollback plan (<15 minutos)
-- Dashboard de validación post-migración
+**Meta:** pasar de contratos y mocks a conectividad sanitaria productiva.
 
-**Entregables:**
-- [ ] Herramienta ETL configurable para 3 sistemas legacy comunes
-- [ ] Dashboard de validación post-migración con métricas
-- [ ] Documentación de mapeo de esquemas legacy → SGF
-- [ ] Plan de rollback y procedimiento de contingencia
+#### Prioridades
 
----
+- implementar cliente real de PAMI SIAFAR
+- implementar integracion real de REFEPS
+- ampliar soporte FHIR y perfiles nacionales ya iniciados
+- endurecer los flujos de venta con validacion sanitaria completa
+- usar los codigos SNOMED ya incorporados al catalogo como base terminologica, sin confundirlos con conectividad sanitaria productiva
 
-### 🔴 FASE 5: Interoperabilidad Sanitaria Avanzada (Meses 13-16)
-**Objetivo**: Integración con ecosistema de salud digital argentino
+#### Estado actual
 
-**Integraciones:**
-1. **ReNaPDiS / HL7 FHIR** - perfiles CORE-AR, CUIR, bus de interoperabilidad
-2. **PAMI** - SIAFAR/ValidaCOFA, tratamientos alto costo, oncología
-3. **REFEPS** - validación de matrículas profesionales
-4. **Consentimiento electrónico** - intercambio de datos clínicos
+`En progreso desde base/mock`
 
-**Entregables:**
-- [ ] Integración ReNaPDiS con gestión de CUIR y perfiles CORE-AR
-- [ ] Módulo PAMI para tratamientos ambulatorios, alto costo y oncología
-- [ ] Validación en tiempo real de matrículas profesionales (REFEPS)
-- [ ] Sistema de consentimiento electrónico
+Ya existen contratos, DTOs, wiring parcial en ventas y base SNOMED desde CNPM/MSal, pero no esta cerrado el tramo productivo de PAMI/REFEPS.
 
----
+### Fase C. ETL y migracion productiva
 
-### 🟣 FASE 6: Capacidades AI-Ready & Analytics (Meses 17-20)
-**Objetivo**: Habilitar inteligencia artificial sobre datos curados
+**Meta:** transformar el stack ETL ya iniciado en una herramienta de migracion utilizable con confianza.
 
-**Casos de uso AI:**
-| Caso de Uso | Técnica | Valor |
-|------------|---------|-------|
-| Previsión de demanda | LSTM + Algoritmos Genéticos | Reducir quiebres 40% |
-| Detección de fraude | Isolation Forest | Identificar dispensas duplicadas |
-| Sugerencia de sustitución | NLP + Knowledge Graph | Aumentar margen con genéricos |
-| Asistente conversacional | RAG + LLM local | Reducir consultas 70% |
-| OCR recetas físicas | Tesseract + fine-tuning | Digitalizar con 95%+ precisión |
+#### Prioridades
 
-**Entregables:**
-- [ ] Pipeline ETL para feature engineering con datos anonimizados
-- [ ] Modelo de forecasting de demanda con explicabilidad SHAP
-- [ ] Dashboard de analytics con visualización de incertidumbre
-- [ ] API interna para consultas de IA
+- convertir la etapa `load` en persistencia real
+- completar rollback operativo
+- cerrar dashboard y validacion post-migracion
+- documentar mapeos legacy -> SGF
+- mantener separado el importador CNPM/MSal ya real de la carga general de sistemas legados
 
----
+#### Estado actual
 
-### ⚫ FASE 7: Hardening Empresarial & Preparación Comercial (Meses 21-24)
-**Objetivo**: Transformar prototipo funcional en producto comercializable
+`En progreso`
 
-**Checklist Enterprise:**
-- [ ] Auditoría externa de seguridad (pentesting)
-- [ ] Load testing: 100 transacciones/segundo por sucursal
-- [ ] Estrategia de sharding multi-tenant
-- [ ] CDN + auto-scaling Kubernetes
-- [ ] Dashboards de negocio en tiempo real (Grafana)
-- [ ] Sistema de tickets + SLA 99.9% uptime
-- [ ] Modelo de licensing SaaS mensual por sucursal
-- [ ] Programa de onboarding + capacitación
-- [ ] Roadmap público de funcionalidades
+La extraccion, transformacion y validacion ya existen. La carga real especifica de Vademecum CNPM/MSal ya existe; falta cerrar la carga legacy general y la operacion completa.
+
+### Fase D. AI productiva
+
+**Meta:** pasar de capacidades AI presentes a serving operacional y medible.
+
+#### Prioridades
+
+- empaquetar modelos ONNX reales
+- medir fallback, calidad y tiempos de inferencia
+- ampliar OCR con datasets y validacion real
+- conectar recomendaciones AI con decisiones operativas auditables
+
+#### Estado actual
+
+`Base implementada`
+
+Forecasting, fraude y OCR ya existen; falta cierre de serving y empaquetado productivo.
+
+### Fase E. Hardening empresarial y comercial
+
+**Meta:** llevar SGF desde una base tecnica fuerte hacia operacion enterprise sostenible.
+
+#### Prioridades
+
+- hardening de seguridad en K8s y plataforma
+- pruebas de carga y resiliencia
+- estrategia multi-tenant endurecida
+- runbooks, soporte, onboarding y readiness comercial
+
+#### Estado actual
+
+`Base iniciada`
+
+Ya hay manifests, monitoreo y load test base, pero no un hardening enterprise completo.
 
 ---
 
-## ⚠️ Riesgos Críticos y Mitigación
+## Hitos deseados
 
-| Riesgo | Impacto | Mitigación |
+### Corto plazo
+
+- baseline backend completamente verde
+- Vademecum publico CNPM/MSal estabilizado como dataset de desarrollo/prototipo
+- PAMI SIAFAR real
+- REFEPS real
+- ETL legacy `load` real
+- modelo ONNX empaquetado
+- mas pruebas E2E
+
+### Mediano plazo
+
+- integracion sanitaria operativa extremo a extremo
+- dashboards de operacion mas maduros
+- despliegues mas endurecidos
+
+### Largo plazo
+
+- producto comercializable con procesos de soporte, operacion y evolucion continua
+
+---
+
+## Riesgos principales
+
+| Riesgo | Impacto | Mitigacion |
 |--------|---------|------------|
-| Cambios regulatorios inesperados | Alto | Arquitectura de adapters, suscribirse a RSS AFIP/ANMAT |
-| Complejidad integraciones SOAP legacy | Alto | Apache CXF, generar clientes desde WSDLs, mocks para dev |
-| Burnout por alcance ambicioso | Crítico | MVP regulatorio (Fase 1-3), primer cliente beta en Mes 6 |
-| Deuda técnica en arquitectura | Medio | 20% tiempo en refactorización, ADRs |
-| Competencia con soluciones establecidas | Comercial | Diferenciación: offline-first + AI-ready + UX moderno |
+| Confundir base tecnica con capacidad productiva | Alto | Documentar estados reales y exigir validacion operativa |
+| Integraciones sanitarias y regulatorias incompletas | Alto | Priorizar cierres reales antes de expandir superficie |
+| Confundir CNPM/MSal publico con SLA comercial | Medio | Documentar que AlfaBeta/Kairos siguen siendo camino pago/productivo |
+| Drift entre documentacion y repo | Medio | Auditorias documentales periodicas |
+| Hardening de plataforma insuficiente | Alto | Roadmap explicito de seguridad y resiliencia |
+| Exceso de alcance simultaneo | Critico | Avanzar por cierres verticales verificables |
 
 ---
 
-## 💡 Principios para el Desarrollo
+## Relacion con otros documentos
 
-1. **Modular Monolith first** - No microservicios prematuros
-2. **Automatizar lo repetitivo** - Framework interno para integraciones regulatorias
-3. **Documentar mientras se codifica** - ADRs para decisiones arquitectónicas
-4. **Feedback temprano** - MVP con AFIP + POS offline en Mes 6
-5. **Priorizar UX del operador** - Velocidad en mostrador es crítica
-6. **Multi-tenant desde el inicio** - schema por cliente o row-level security
+- [[MASTER_PLAN]]: estado operativo real, brechas y proximos pasos verificables
+- [[00_DASHBOARD]]: portada ejecutiva y bloqueo principal actual
+- [[ARCHITECTURE]]: arquitectura efectiva del repo
+- [[README]]: onboarding tecnico y contrato operativo
+- [[Archive/|Archive]]: historico documental

@@ -1,1 +1,208 @@
-<p>pos works!</p>
+<div class="dashboard-container flex gap-6">
+  <div class="flex-grow left-column">
+    <mat-card class="glass-card mb-6">
+      <mat-card-header>
+        <mat-card-title>Terminal POS</mat-card-title>
+      </mat-card-header>
+      <mat-card-content class="p-4">
+        <div class="terminal-toolbar">
+          <mat-form-field appearance="outline" class="terminal-field">
+            <mat-label>Terminal</mat-label>
+            <input matInput [(ngModel)]="activeTerminalId" (blur)="onTerminalContextChange()">
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="terminal-field">
+            <mat-label>Sucursal</mat-label>
+            <mat-select [(ngModel)]="activeBranchId" (selectionChange)="onTerminalContextChange()">
+              <mat-option *ngFor="let branch of branches" [value]="branch.id">
+                {{ branch.label }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+          <button mat-stroked-button type="button" (click)="recoverTerminal()">Recuperar</button>
+          <button mat-stroked-button type="button" (click)="closeTerminal()">Cerrar terminal</button>
+          <button mat-raised-button color="primary" type="button" (click)="newTerminalOrder()">Nueva orden</button>
+        </div>
+
+        <div class="terminal-summary">
+          <div><strong>Ordenes abiertas:</strong> {{ terminalOrders.length }}</div>
+          <div><strong>Draft:</strong> {{ countByStatus('DRAFT') }}</div>
+          <div><strong>Ready:</strong> {{ countByStatus('READY') }}</div>
+          <div *ngIf="recoveryState"><strong>Recuperadas:</strong> {{ recoveryState.recoveredOrders }}</div>
+          <div><strong>Activa:</strong> {{ currentOrder?.orderNumber || 'Sin orden activa' }}</div>
+        </div>
+
+        <div class="message error" *ngIf="errorMessage">{{ errorMessage }}</div>
+        <div class="message success" *ngIf="successMessage">{{ successMessage }}</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="glass-card mb-6">
+      <mat-card-content class="p-4">
+        <div class="flex gap-4 items-center wrap">
+          <mat-form-field appearance="outline" class="flex-grow">
+            <mat-label>Escanear o buscar producto</mat-label>
+            <input matInput placeholder="GTIN o nombre" [(ngModel)]="searchQuery" (keyup.enter)="searchProducts()">
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="price-field">
+            <mat-label>Precio manual opcional</mat-label>
+            <input matInput type="number" [(ngModel)]="unitPrice" min="0">
+          </mat-form-field>
+          <button mat-raised-button color="primary" (click)="searchProducts()" class="h-14">Buscar</button>
+        </div>
+
+        <div class="results" *ngIf="searchResults.length > 0">
+          <button
+            mat-stroked-button
+            type="button"
+            *ngFor="let product of searchResults"
+            (click)="addProduct(product)">
+            {{ product.sku }} - {{ product.commercialName }}
+            <span *ngIf="product.latestRetailPrice">
+              · ${{ product.latestRetailPrice | number:'1.2-2' }} {{ product.latestPriceSource || product.source || '' }}
+            </span>
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="glass-card mb-6">
+      <mat-card-header>
+        <mat-card-title>Cola operativa por terminal</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="queue-groups" *ngIf="terminalOrders.length > 0; else noOrders">
+          <section class="queue-group">
+            <div class="queue-header">
+              <h3>Listas para cobrar</h3>
+              <span class="queue-count">{{ countByStatus('READY') }}</span>
+            </div>
+            <div class="open-orders-grid">
+              <div class="terminal-order-card ready" *ngFor="let order of ordersByStatus('READY')" [class.active]="isActiveOrder(order.orderId)">
+                <div class="terminal-order-head">
+                  <strong>#{{ order.orderNumber }}</strong>
+                  <span>{{ order.status }}</span>
+                </div>
+                <div class="terminal-order-meta">
+                  {{ order.customerName || 'Cliente mostrador' }} · {{ order.itemCount }} item(s)
+                </div>
+                <div class="terminal-order-actions">
+                  <button mat-stroked-button type="button" (click)="switchOrder(order.orderId)" [disabled]="isActiveOrder(order.orderId)">
+                    Activar
+                  </button>
+                  <button mat-stroked-button type="button" (click)="removeOrder(order.orderId)">
+                    Remover
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="queue-group">
+            <div class="queue-header">
+              <h3>Ordenes en preparacion</h3>
+              <span class="queue-count">{{ countByStatus('DRAFT') }}</span>
+            </div>
+            <div class="open-orders-grid">
+              <div class="terminal-order-card draft" *ngFor="let order of ordersByStatus('DRAFT')" [class.active]="isActiveOrder(order.orderId)">
+                <div class="terminal-order-head">
+                  <strong>#{{ order.orderNumber }}</strong>
+                  <span>{{ order.status }}</span>
+                </div>
+                <div class="terminal-order-meta">
+                  {{ order.customerName || 'Cliente mostrador' }} · {{ order.itemCount }} item(s)
+                </div>
+                <div class="terminal-order-actions">
+                  <button mat-stroked-button type="button" (click)="switchOrder(order.orderId)" [disabled]="isActiveOrder(order.orderId)">
+                    Activar
+                  </button>
+                  <button mat-stroked-button type="button" (click)="removeOrder(order.orderId)">
+                    Remover
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+        <ng-template #noOrders>
+          <div class="empty-box">No hay ordenes abiertas en esta terminal.</div>
+        </ng-template>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="glass-card flex-grow overflow-hidden">
+      <p-table [value]="currentOrder?.items || []" class="p-datatable-sm">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Producto</th>
+            <th>Fuente</th>
+            <th>Cant.</th>
+            <th>Precio</th>
+            <th>Subtotal</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-item>
+          <tr>
+            <td>{{ item.productName }}</td>
+            <td>{{ item.productSource || 'Manual/Catálogo' }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>${{ item.unitPrice | number:'1.2-2' }}</td>
+            <td class="font-bold">${{ item.subtotal | number:'1.2-2' }}</td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="5" class="text-center p-8 text-slate-400">
+              No hay items cargados.
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </mat-card>
+  </div>
+
+  <div class="w-96 flex flex-col gap-6">
+    <mat-card class="glass-card">
+      <mat-card-header>
+        <mat-card-title>Orden POS</mat-card-title>
+      </mat-card-header>
+      <mat-card-content class="p-6">
+        <div class="flex justify-between mb-2">
+          <span>Orden:</span>
+          <span>{{ currentOrder?.orderNumber || '-' }}</span>
+        </div>
+        <div class="flex justify-between mb-2">
+          <span>Estado:</span>
+          <span>{{ currentOrder?.status || 'SIN ORDEN' }}</span>
+        </div>
+        <div class="flex justify-between mb-2">
+          <span>Terminal:</span>
+          <span>{{ activeTerminalId }}</span>
+        </div>
+        <div class="flex justify-between mb-2">
+          <span>Sucursal:</span>
+          <span>{{ activeBranchId }}</span>
+        </div>
+        <div class="border-t pt-4 flex justify-between items-center">
+          <span class="text-xl font-bold">TOTAL:</span>
+          <span class="text-3xl font-bold text-blue-700">${{ currentOrder?.totalAmount || 0 | number:'1.2-2' }}</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="glass-card">
+      <mat-card-content class="p-4 flex flex-col gap-3">
+        <button mat-raised-button color="accent" class="w-full h-12" (click)="markReady()" [disabled]="!currentOrder || currentOrder.itemCount === 0 || currentOrder.status !== 'DRAFT'">
+          <mat-icon>task_alt</mat-icon> MARCAR READY
+        </button>
+        <button mat-raised-button color="primary" class="w-full h-16 text-lg" (click)="completeOrder()" [disabled]="!currentOrder || currentOrder.status !== 'READY'">
+          <mat-icon>payments</mat-icon> COBRAR
+        </button>
+        <div *ngIf="completedSale" class="receipt-box">
+          Venta: {{ completedSale.saleId }}<br>
+          Estado: {{ completedSale.status }}
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

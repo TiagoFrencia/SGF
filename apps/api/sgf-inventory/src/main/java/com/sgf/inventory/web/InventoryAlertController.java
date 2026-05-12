@@ -30,7 +30,7 @@ public class InventoryAlertController {
      * Returns batches expiring within the given window.
      */
     @GetMapping("/expiry")
-    public List<ExpiryAlert> expiryAlerts(@RequestParam(defaultValue = "90") int days) {
+    public List<ExpiryAlert> expiryAlerts(@RequestParam(name = "days", defaultValue = "90") int days) {
         return expiryAlertService.getExpiryAlerts(days);
     }
 
@@ -49,9 +49,9 @@ public class InventoryAlertController {
      */
     @GetMapping("/reorder/{productId}")
     public ReorderCalculation productReorderPoint(
-            @PathVariable UUID productId,
-            @RequestParam(defaultValue = "90") int analysisDays,
-            @RequestParam(defaultValue = "7") int leadTimeDays) {
+            @PathVariable("productId") UUID productId,
+            @RequestParam(name = "analysisDays", defaultValue = "90") int analysisDays,
+            @RequestParam(name = "leadTimeDays", defaultValue = "7") int leadTimeDays) {
         return reorderPointService.calculate(productId, analysisDays, leadTimeDays);
     }
 }

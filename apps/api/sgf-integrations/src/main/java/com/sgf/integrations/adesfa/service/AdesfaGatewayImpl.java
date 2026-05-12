@@ -7,9 +7,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.UUID;
-import org.springframework.stereotype.Component;
 
-@Component
 public class AdesfaGatewayImpl implements AdesfaGateway {
 
     private final AdesfaProperties properties;

@@ -1,6 +1,7 @@
 package com.sgf.integrations.etl;
 
 import com.sgf.catalog.service.ProductService;
+import com.sgf.core.context.TenantContext;
 import com.sgf.integrations.etl.extract.LegacyExtractor;
 import com.sgf.integrations.etl.transform.DataTransformer;
 import com.sgf.integrations.etl.transform.DataTransformer.TransformResult;
@@ -40,6 +41,7 @@ import org.springframework.stereotype.Service;
 public class MigrationDashboard {
 
     private static final Logger log = LoggerFactory.getLogger(MigrationDashboard.class);
+    private static final String DEFAULT_TENANT_ID = "00000000-0000-0000-0000-000000000001";
 
     private final DataTransformer transformer;
     private final DataValidator validator;
@@ -106,6 +108,7 @@ public class MigrationDashboard {
             sourceSystem,
             run.getTotalRecords(),
             dryRun,
+            resolveTenantId(),
             OffsetDateTime.now()
         ));
 
@@ -308,6 +311,7 @@ public class MigrationDashboard {
             run.getStatus(),
             run.getPassedCount(),
             run.getFailedCount(),
+            resolveTenantId(),
             OffsetDateTime.now()
         ));
         log.info("Migration {} finished: {} — {} passed, {} failed",
@@ -334,6 +338,11 @@ public class MigrationDashboard {
         if (run.getTotalRecords() == 0) return 100;
         long processed = run.getExtractedCount();
         return (int) Math.min(100, (processed * 100L) / run.getTotalRecords());
+    }
+
+    private String resolveTenantId() {
+        String tenantId = TenantContext.getTenantId();
+        return tenantId == null || tenantId.isBlank() ? DEFAULT_TENANT_ID : tenantId;
     }
 
     // --- Types ---

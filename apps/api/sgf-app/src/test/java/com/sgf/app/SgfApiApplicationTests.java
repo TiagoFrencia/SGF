@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sgf.app.support.PostgresIntegrationTestSupport;
 import com.sgf.catalog.domain.Product;
 import com.sgf.catalog.domain.ProductRepository;
 import com.sgf.integrations.anmat.domain.AnmatEventStatus;
@@ -18,30 +19,19 @@ import com.sgf.inventory.domain.Batch;
 import com.sgf.inventory.domain.BatchRepository;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Testcontainers
-class SgfApiApplicationTests {
-
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15-alpine")
-            .withDatabaseName("sgf")
-            .withUsername("sgf")
-            .withPassword("sgf");
+@Tag("integration")
+class SgfApiApplicationTests extends PostgresIntegrationTestSupport {
 
     @Autowired
     MockMvc mockMvc;
@@ -57,18 +47,6 @@ class SgfApiApplicationTests {
 
     @Autowired
     AnmatTraceabilityEventRepository anmatTraceabilityEventRepository;
-
-    @BeforeAll
-    static void beforeAll() {
-        postgres.start();
-    }
-
-    @DynamicPropertySource
-    static void databaseProps(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-    }
 
     @Test
     void fullFlowWorksAndSalesAreIdempotent() throws Exception {
@@ -145,7 +123,8 @@ class SgfApiApplicationTests {
         mockMvc.perform(get("/inventory/stock")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].availableQuantity").value(8));
+                .andExpect(jsonPath("$[?(@.sku == 'AMOX-500')].availableQuantity")
+                        .value(org.hamcrest.Matchers.hasItem(8)));
 
         mockMvc.perform(get("/audit/events")
                         .header("Authorization", "Bearer " + token))
@@ -448,6 +427,21 @@ class SgfApiApplicationTests {
         String saleId = objectMapper.readTree(saleResult.getResponse().getContentAsString()).get("saleId").asText();
         String dataMatrix = "(01)07791234567893(17)%s(10)TRACE-LOT-001(21)TRACE-SERIAL-001"
                 .formatted(LocalDate.now().plusYears(1).format(java.time.format.DateTimeFormatter.ofPattern("yyMMdd")));
+
+        mockMvc.perform(post("/anmat/events")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "eventType": "RECEIPT",
+                                  "dataMatrix": "%s",
+                                  "gln": "7791234500001",
+                                  "source": "SCANNER",
+                                  "occurredAt": "2026-05-04T22:49:00Z"
+                                }
+                                """.formatted(dataMatrix)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.eventType").value("RECEIPT"));
 
         mockMvc.perform(post("/anmat/events")
                         .header("Authorization", "Bearer " + token)

@@ -72,6 +72,7 @@ public class InventoryService {
             ).stream().mapToInt(Batch::getAvailableQuantity).sum(),
             "RECEIPT",
             actor,
+            saved.getProduct().getTenantId(),
             OffsetDateTime.now()
         ));
         return InventoryReceiptResponse.from(saved);
@@ -117,6 +118,7 @@ public class InventoryService {
             newTotal,
             "SALE",
             "system", // Often automated during sale
+            eligible.getFirst().getProduct().getTenantId(),
             OffsetDateTime.now()
         ));
         return allocations;

@@ -1,1 +1,249 @@
-<p>stock-view works!</p>
+<div class="dashboard-container">
+  <mat-card class="glass-card form-card">
+    <div class="header-row">
+      <h2>Inventario operativo</h2>
+      <button pButton type="button" icon="pi pi-refresh" label="Recargar" class="p-button-outlined" (click)="reload()"></button>
+    </div>
+
+    <div class="form-grid">
+      <label>
+        Producto
+        <select [(ngModel)]="receipt.productId">
+          <option value="">Seleccionar...</option>
+          <option *ngFor="let product of products" [value]="product.id">
+            {{ product.sku }} - {{ product.commercialName }}
+          </option>
+        </select>
+      </label>
+      <label>
+        Lote
+        <input pInputText [(ngModel)]="receipt.lotNumber" placeholder="LOT-2026-001">
+      </label>
+      <label>
+        Vence
+        <input pInputText type="date" [(ngModel)]="receipt.expiresAt">
+      </label>
+      <label>
+        Cantidad
+        <input pInputText type="number" [(ngModel)]="receipt.quantity">
+      </label>
+      <label>
+        Costo unitario
+        <input pInputText type="number" [(ngModel)]="receipt.unitCost">
+      </label>
+    </div>
+
+    <div class="actions">
+      <button pButton type="button" label="Registrar ingreso" (click)="receiveStock()"></button>
+      <span class="status success" *ngIf="successMessage">{{ successMessage }}</span>
+      <span class="status error" *ngIf="errorMessage">{{ errorMessage }}</span>
+    </div>
+  </mat-card>
+
+  <mat-card class="glass-card form-card">
+    <div class="header-row">
+      <h2>Transferencias multi-sucursal</h2>
+      <button pButton type="button" icon="pi pi-sync" label="Recargar transferencias" class="p-button-outlined" (click)="reloadTransfers()"></button>
+    </div>
+
+    <div class="form-grid">
+      <label>
+        Sucursal origen
+        <select [(ngModel)]="transfer.sourceBranchId" (ngModelChange)="reloadTransfers()">
+          <option *ngFor="let branch of branches" [value]="branch.id">{{ branch.label }}</option>
+        </select>
+      </label>
+      <label>
+        Sucursal destino
+        <select [(ngModel)]="transfer.destinationBranchId" (ngModelChange)="reloadTransfers()">
+          <option *ngFor="let branch of branches" [value]="branch.id">{{ branch.label }}</option>
+        </select>
+      </label>
+      <label>
+        Producto
+        <select [(ngModel)]="transfer.productId" (ngModelChange)="loadTransferBatches()">
+          <option value="">Seleccionar...</option>
+          <option *ngFor="let product of products" [value]="product.id">
+            {{ product.sku }} - {{ product.commercialName }}
+          </option>
+        </select>
+      </label>
+      <label>
+        Lote origen
+        <select [(ngModel)]="transfer.batchId">
+          <option value="">Seleccionar...</option>
+          <option *ngFor="let batch of transferBatches" [value]="batch.batchId">
+            {{ batch.lotNumber }} · {{ batch.availableQuantity }} u.
+          </option>
+        </select>
+      </label>
+      <label>
+        Cantidad
+        <input pInputText type="number" [(ngModel)]="transfer.quantity">
+      </label>
+      <label>
+        Notas
+        <input pInputText [(ngModel)]="transfer.notes" placeholder="Reposicion inter-sucursal">
+      </label>
+    </div>
+
+    <div class="actions">
+      <button pButton type="button" label="Crear transferencia" (click)="createTransfer()"></button>
+      <span class="status" [class.success]="!transferMessage.startsWith('No se pudo')" [class.error]="transferMessage.startsWith('No se pudo')" *ngIf="transferMessage">
+        {{ transferMessage }}
+      </span>
+    </div>
+
+    <div class="filter-row">
+      <label>
+        Vista
+        <select [(ngModel)]="selectedListMode" (ngModelChange)="reloadTransfers()">
+          <option value="source">Por origen</option>
+          <option value="destination">Por destino</option>
+        </select>
+      </label>
+      <label>
+        Estado
+        <select [(ngModel)]="selectedTransferStatus" (ngModelChange)="reloadTransfers()">
+          <option value="">Todos</option>
+          <option value="PENDING">PENDING</option>
+          <option value="IN_TRANSIT">IN_TRANSIT</option>
+          <option value="RECEIVED">RECEIVED</option>
+          <option value="DISPUTED">DISPUTED</option>
+          <option value="CANCELLED">CANCELLED</option>
+        </select>
+      </label>
+      <label>
+        Producto
+        <select [(ngModel)]="transferProductFilter">
+          <option value="">Todos</option>
+          <option *ngFor="let product of products" [value]="product.id">
+            {{ product.sku }} - {{ product.commercialName }}
+          </option>
+        </select>
+      </label>
+    </div>
+
+    <div class="transfer-health-row">
+      <div class="status-pill pending">Pending {{ transferCount('PENDING') }}</div>
+      <div class="status-pill transit">In transit {{ transferCount('IN_TRANSIT') }}</div>
+      <div class="status-pill disputed">Disputed {{ transferCount('DISPUTED') }}</div>
+      <div class="status-pill received">Received {{ transferCount('RECEIVED') }}</div>
+    </div>
+  </mat-card>
+
+  <div class="three-col">
+    <mat-card class="glass-card">
+      <h3>Stock disponible</h3>
+      <p-table [value]="stock" [rows]="8" [paginator]="true" responsiveLayout="scroll">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Producto</th>
+            <th>SKU</th>
+            <th>Lote</th>
+            <th>Vence</th>
+            <th>Cantidad</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row>
+          <tr>
+            <td>{{ row.productName }}</td>
+            <td>{{ row.sku }}</td>
+            <td>{{ row.lotNumber }}</td>
+            <td>{{ row.expiresAt }}</td>
+            <td>{{ row.availableQuantity }}</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </mat-card>
+
+    <mat-card class="glass-card">
+      <h3>Alertas</h3>
+      <h4>Proximos vencimientos</h4>
+      <p-table [value]="expiring" [rows]="5" [paginator]="true" responsiveLayout="scroll">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Producto</th>
+            <th>Lote</th>
+            <th>Dias</th>
+            <th>Severidad</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row>
+          <tr>
+            <td>{{ row.productName }}</td>
+            <td>{{ row.lotNumber }}</td>
+            <td>{{ row.daysUntilExpiry }}</td>
+            <td>{{ row.severity }}</td>
+          </tr>
+        </ng-template>
+      </p-table>
+
+      <h4>Reorder</h4>
+      <p-table [value]="reorderAlerts" [rows]="5" [paginator]="true" responsiveLayout="scroll">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Producto</th>
+            <th>Stock</th>
+            <th>Punto</th>
+            <th>EOQ</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row>
+          <tr>
+            <td>{{ row.productName }}</td>
+            <td>{{ row.currentStock }}</td>
+            <td>{{ row.reorderPoint }}</td>
+            <td>{{ row.eoq }}</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </mat-card>
+
+    <mat-card class="glass-card">
+      <h3>Transferencias</h3>
+      <p-table [value]="filteredTransfers" [rows]="8" [paginator]="true" responsiveLayout="scroll">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Producto</th>
+            <th>Origen</th>
+            <th>Destino</th>
+            <th>Estado</th>
+            <th>Recepcion</th>
+            <th>Acciones</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row>
+          <tr>
+            <td>
+              {{ row.productName }}<br>
+              <small>{{ row.lotNumber }} · enviadas {{ row.quantity }} u.</small><br>
+              <small *ngIf="row.receivedQuantity != null">recibidas {{ row.receivedQuantity }} u.</small><br>
+              <small *ngIf="row.notes">{{ row.notes }}</small>
+            </td>
+            <td>{{ branchLabel(row.sourceBranchId) }}</td>
+            <td>{{ branchLabel(row.destinationBranchId) }}</td>
+            <td>{{ row.status }}</td>
+            <td>
+              <input
+                *ngIf="canReceive(row)"
+                pInputText
+                type="number"
+                min="0"
+                [max]="row.quantity"
+                [(ngModel)]="receiveQuantityByTransfer[row.id]">
+              <span *ngIf="!canReceive(row)">
+                {{ row.receivedQuantity ?? row.quantity }}
+              </span>
+            </td>
+            <td class="action-buttons">
+              <button pButton type="button" label="Ship" class="p-button-sm" *ngIf="canShip(row)" (click)="shipTransfer(row)"></button>
+              <button pButton type="button" label="Receive" class="p-button-sm p-button-success" *ngIf="canReceive(row)" (click)="receiveTransfer(row)"></button>
+              <button pButton type="button" label="Cancel" class="p-button-sm p-button-danger" *ngIf="canCancel(row)" (click)="cancelTransfer(row)"></button>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </mat-card>
+  </div>
+</div>

@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS pos_order_items (
     unit_price          DECIMAL(10,2) NOT NULL,
     subtotal            DECIMAL(12,2) NOT NULL,
     batch_id            UUID        REFERENCES batches(id),
-    created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_pos_order_items_order

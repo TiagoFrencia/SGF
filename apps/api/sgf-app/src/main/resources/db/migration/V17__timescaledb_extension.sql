@@ -4,6 +4,6 @@ DO $$
 BEGIN
     CREATE EXTENSION IF NOT EXISTS timescaledb;
 EXCEPTION
-    WHEN undefined_file OR insufficient_privilege THEN
+    WHEN undefined_file OR insufficient_privilege OR feature_not_supported THEN
         RAISE NOTICE 'timescaledb extension not available/allowed in this environment; continuing without it';
 END $$;

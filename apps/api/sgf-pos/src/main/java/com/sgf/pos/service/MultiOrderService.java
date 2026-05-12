@@ -1,5 +1,6 @@
 package com.sgf.pos.service;
 
+import com.sgf.core.domain.ConflictException;
 import com.sgf.pos.domain.PosOrder;
 import com.sgf.pos.domain.PosOrder.OrderStatus;
 import java.util.List;
@@ -67,7 +68,7 @@ public class MultiOrderService {
     public PosOrder switchTo(String terminalId, UUID orderId) {
         if (!terminalOrders.containsKey(terminalId)
                 || !terminalOrders.get(terminalId).contains(orderId)) {
-            throw new IllegalArgumentException("Order " + orderId + " is not open on terminal " + terminalId);
+            throw new ConflictException("Order " + orderId + " is not open on terminal " + terminalId);
         }
         activeOrder.put(terminalId, orderId);
         log.debug("Terminal {}: switched to order {}", terminalId, orderId);

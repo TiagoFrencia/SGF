@@ -28,7 +28,7 @@ public class AfipController {
 
     @PostMapping("/sales/{saleId}/authorize")
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST')")
-    public AfipInvoiceResponse authorize(@PathVariable UUID saleId,
+    public AfipInvoiceResponse authorize(@PathVariable("saleId") UUID saleId,
                                          @Valid @RequestBody AfipAuthorizeInvoiceRequest request,
                                          java.security.Principal principal) {
         return afipService.authorizeSaleInvoice(saleId, request, principal.getName());
@@ -36,13 +36,13 @@ public class AfipController {
 
     @GetMapping("/{invoiceId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'AUDITOR')")
-    public AfipInvoiceResponse getById(@PathVariable UUID invoiceId) {
+    public AfipInvoiceResponse getById(@PathVariable("invoiceId") UUID invoiceId) {
         return afipService.getInvoice(invoiceId);
     }
 
     @GetMapping("/health")
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'AUDITOR')")
-    public AfipHealthResponse health(@org.springframework.web.bind.annotation.RequestParam(defaultValue = "false") boolean refreshToken) {
+    public AfipHealthResponse health(@org.springframework.web.bind.annotation.RequestParam(name = "refreshToken", defaultValue = "false") boolean refreshToken) {
         return afipConnectivityService.inspect(refreshToken);
     }
 }

@@ -1,9 +1,4 @@
 spring:
-  datasource:
-    url: jdbc:tc:postgresql:15-alpine:///sgf_test
-    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
-    username: test
-    password: test
   jpa:
     hibernate:
       ddl-auto: validate
@@ -14,11 +9,13 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
-sgf:
-  security:
-    jwt:
-      secret: test-secret-key-for-integration-tests-must-be-long-enough
-      expiration-ms: 3600000
+app:
+  jwt:
+    issuer: sgf-api-test
+    expiration-minutes: 60
+    secret: test-secret-key-for-integration-tests-must-be-long-enough
+  background-jobs:
+    enabled: false
 
 logging:
   level:

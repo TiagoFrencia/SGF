@@ -1,7 +1,9 @@
 package com.sgf.pos.service;
 
 import com.sgf.catalog.domain.Product;
+import com.sgf.catalog.service.ProductPricingService;
 import com.sgf.catalog.service.ProductService;
+import com.sgf.core.domain.BadRequestException;
 import com.sgf.core.domain.ConflictException;
 import com.sgf.core.domain.NotFoundException;
 import com.sgf.inventory.service.InventoryService;
@@ -28,15 +30,18 @@ public class PosOrderService {
 
     private final PosOrderRepository orderRepository;
     private final ProductService productService;
+    private final ProductPricingService productPricingService;
     private final InventoryService inventoryService;
     private final SalesService salesService;
 
     public PosOrderService(PosOrderRepository orderRepository,
                            ProductService productService,
+                           ProductPricingService productPricingService,
                            InventoryService inventoryService,
                            SalesService salesService) {
         this.orderRepository = orderRepository;
         this.productService = productService;
+        this.productPricingService = productPricingService;
         this.inventoryService = inventoryService;
         this.salesService = salesService;
     }
@@ -60,7 +65,8 @@ public class PosOrderService {
     public PosOrder addItem(UUID orderId, UUID productId, int quantity, BigDecimal unitPrice, UUID batchId) {
         PosOrder order = findDraft(orderId);
         Product product = productService.findEntity(productId);
-        order.addItem(product, quantity, unitPrice, batchId);
+        BigDecimal resolvedUnitPrice = resolveUnitPrice(product, unitPrice);
+        order.addItem(product, quantity, resolvedUnitPrice, batchId);
         return orderRepository.save(order);
     }
 
@@ -96,7 +102,9 @@ public class PosOrderService {
      * Complete order: convert to sale, reserve inventory, trigger AFIP/ANMAT.
      * Returns the sale ID for the completed transaction.
      */
-    public UUID completeOrder(UUID orderId, String paymentMethod, String idempotencyKey) {
+    public UUID completeOrder(UUID orderId, String paymentMethod, String idempotencyKey,
+                               String pamiPrescriptionId, String pamiBeneficiaryId,
+                               String doctorLicense, String doctorRegion) {
         PosOrder order = findReady(orderId);
 
         // Convert order items to sale items DTO
@@ -113,7 +121,11 @@ public class PosOrderService {
                 idempotencyKey != null ? idempotencyKey : "pos-order-" + orderId,
                 saleItems,
                 paymentMethod,
-                order.getCustomerDocument()
+                order.getCustomerDocument(),
+                pamiPrescriptionId,
+                pamiBeneficiaryId,
+                doctorLicense,
+                doctorRegion
         );
         var saleResult = salesService.create(saleReq, "pos-operator");
 
@@ -166,5 +178,15 @@ public class PosOrderService {
     private int nextOrderNumber(UUID branchId) {
         var last = orderRepository.findTopByBranchIdAndStatusOrderByOrderNumberDesc(branchId, OrderStatus.DRAFT);
         return last.map(o -> o.getOrderNumber() + 1).orElse(1);
+    }
+
+    private BigDecimal resolveUnitPrice(Product product, BigDecimal requestedUnitPrice) {
+        if (requestedUnitPrice != null && requestedUnitPrice.compareTo(BigDecimal.ZERO) > 0) {
+            return requestedUnitPrice;
+        }
+        return productPricingService.latestPrice(product)
+                .map(quote -> quote.retailPrice())
+                .orElseThrow(() -> new BadRequestException(
+                        "No hay precio vigente para el producto; ingrese un precio manual."));
     }
 }

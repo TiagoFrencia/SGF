@@ -1,0 +1,40 @@
+{
+  "nodes": [
+    {"id": "architecture_overview", "label": "SGF Architecture Overview", "file_type": "document", "source_file": "ARCHITECTURE.md"},
+    {"id": "modular_monolith", "label": "Modular Monolith", "file_type": "document", "source_file": "ARCHITECTURE.md"},
+    {"id": "sgf_core", "label": "sgf-core (Core Logic)", "file_type": "code", "source_file": "ARCHITECTURE.md"},
+    {"id": "sgf_catalog", "label": "sgf-catalog (Products)", "file_type": "code", "source_file": "ARCHITECTURE.md"},
+    {"id": "sgf_inventory", "label": "sgf-inventory (Stock)", "file_type": "code", "source_file": "ARCHITECTURE.md"},
+    {"id": "sgf_pos", "label": "sgf-pos (Point of Sale)", "file_type": "code", "source_file": "ARCHITECTURE.md"},
+    {"id": "sgf_audit", "label": "sgf-audit (Auditing)", "file_type": "code", "source_file": "ARCHITECTURE.md"},
+    {"id": "sgf_integrations", "label": "sgf-integrations (External APIs)", "file_type": "code", "source_file": "ARCHITECTURE.md"},
+    {"id": "sgf_sync", "label": "sgf-sync (Offline Sync)", "file_type": "code", "source_file": "ARCHITECTURE.md"},
+    {"id": "sgf_ai", "label": "sgf-ai (AI/ML Services)", "file_type": "code", "source_file": "ARCHITECTURE.md"},
+    {"id": "afip_integration", "label": "AFIP Integration (WSAA/WSFE)", "file_type": "document", "source_file": "README.md"},
+    {"id": "anmat_trazability", "label": "ANMAT Traceability", "file_type": "document", "source_file": "README.md"},
+    {"id": "adesfa_validation", "label": "ADESFA Validation", "file_type": "document", "source_file": "README.md"},
+    {"id": "roadmap_sgf", "label": "SGF Roadmap", "file_type": "document", "source_file": "ROADMAP.md"},
+    {"id": "phase_1_foundations", "label": "Phase 1: Foundations", "file_type": "document", "source_file": "ROADMAP.md"},
+    {"id": "phase_2_core_modules", "label": "Phase 2: Core Modules", "file_type": "document", "source_file": "ROADMAP.md"},
+    {"id": "phase_3_regulatory", "label": "Phase 3: Regulatory Integrations", "file_type": "document", "source_file": "ROADMAP.md"},
+    {"id": "phase_4_etl_migration", "label": "Phase 4: ETL & Migration", "file_type": "document", "source_file": "ROADMAP.md"},
+    {"id": "phase_5_health_interop", "label": "Phase 5: Health Interoperability", "file_type": "document", "source_file": "ROADMAP.md"},
+    {"id": "phase_6_ai_analytics", "label": "Phase 6: AI & Analytics", "file_type": "document", "source_file": "ROADMAP.md"},
+    {"id": "phase_7_enterprise_hardening", "label": "Phase 7: Enterprise Hardening", "file_type": "document", "source_file": "ROADMAP.md"}
+  ],
+  "edges": [
+    {"source": "modular_monolith", "target": "sgf_core", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "ARCHITECTURE.md"},
+    {"source": "modular_monolith", "target": "sgf_catalog", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "ARCHITECTURE.md"},
+    {"source": "modular_monolith", "target": "sgf_inventory", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "ARCHITECTURE.md"},
+    {"source": "modular_monolith", "target": "sgf_pos", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "ARCHITECTURE.md"},
+    {"source": "sgf_integrations", "target": "afip_integration", "relation": "implements", "confidence": "INFERRED", "confidence_score": 0.95, "source_file": "ARCHITECTURE.md"},
+    {"source": "sgf_integrations", "target": "anmat_trazability", "relation": "implements", "confidence": "INFERRED", "confidence_score": 0.95, "source_file": "ARCHITECTURE.md"},
+    {"source": "sgf_integrations", "target": "adesfa_validation", "relation": "implements", "confidence": "INFERRED", "confidence_score": 0.95, "source_file": "ARCHITECTURE.md"},
+    {"source": "sgf_ai", "target": "phase_6_ai_analytics", "relation": "conceptually_related_to", "confidence": "INFERRED", "confidence_score": 0.85, "source_file": "ROADMAP.md"},
+    {"source": "roadmap_sgf", "target": "phase_1_foundations", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "ROADMAP.md"},
+    {"source": "roadmap_sgf", "target": "phase_2_core_modules", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "ROADMAP.md"}
+  ],
+  "hyperedges": [],
+  "input_tokens": 15000,
+  "output_tokens": 2000
+}

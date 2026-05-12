@@ -11,11 +11,15 @@ public record ProductCreatedEvent(
     String gtin,
     String commercialName,
     String actorUsername,
+    String tenantId,
     OffsetDateTime occurredAt
 ) implements DomainEvent {
 
     @Override
     public UUID aggregateId() { return productId; }
+
+    @Override
+    public String tenantId() { return tenantId; }
 
     @Override
     public String aggregateType() { return "PRODUCT"; }

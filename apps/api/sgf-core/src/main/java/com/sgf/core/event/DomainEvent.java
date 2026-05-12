@@ -11,6 +11,8 @@ public interface DomainEvent {
 
     UUID aggregateId();
 
+    String tenantId();
+
     String aggregateType();
 
     String eventType();

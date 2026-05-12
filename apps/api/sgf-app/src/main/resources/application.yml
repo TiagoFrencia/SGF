@@ -75,6 +75,8 @@ app:
   sync:
     enabled: ${APP_SYNC_ENABLED:true}
     remote-url: ${APP_SYNC_REMOTE_URL:http://localhost:8080}
+  background-jobs:
+    enabled: ${APP_BACKGROUND_JOBS_ENABLED:true}
 
 logging:
   level:

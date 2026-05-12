@@ -11,6 +11,7 @@ import java.util.UUID;
 
 @MappedSuperclass
 public abstract class BaseEntity {
+    private static final String DEFAULT_TENANT_ID = "00000000-0000-0000-0000-000000000001";
 
     @Id
     private UUID id;
@@ -32,6 +33,9 @@ public abstract class BaseEntity {
         }
         if (tenantId == null) {
             tenantId = TenantContext.getTenantId();
+        }
+        if (tenantId == null || tenantId.isBlank()) {
+            tenantId = DEFAULT_TENANT_ID;
         }
         createdAt = now;
         updatedAt = now;
@@ -74,4 +78,3 @@ public abstract class BaseEntity {
         this.tenantId = tenantId;
     }
 }
-

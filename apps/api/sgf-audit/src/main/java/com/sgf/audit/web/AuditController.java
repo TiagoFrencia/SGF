@@ -27,7 +27,7 @@ public class AuditController {
     @Operation(summary = "Get latest audit events", description = "Retrieves the most recent system events with cryptographic integrity checks.")
     public List<AuditEventResponse> latest(
             @Parameter(description = "Maximum number of events to return (max 200)")
-            @RequestParam(defaultValue = "50") int limit) {
+            @RequestParam(name = "limit", defaultValue = "50") int limit) {
         return auditService.latest(Math.min(limit, 200));
     }
 
@@ -37,8 +37,7 @@ public class AuditController {
             description = "Recomputes the audit hash-chain and reports the first broken link if tampering is detected.")
     public AuditService.AuditChainVerification verify(
             @Parameter(description = "Maximum number of events to verify (max 5000)")
-            @RequestParam(defaultValue = "1000") int limit) {
+            @RequestParam(name = "limit", defaultValue = "1000") int limit) {
         return auditService.verifyChain(Math.min(limit, 5000));
     }
 }
-

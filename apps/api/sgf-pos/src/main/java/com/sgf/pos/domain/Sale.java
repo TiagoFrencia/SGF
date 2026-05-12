@@ -34,6 +34,9 @@ public class Sale extends BaseEntity {
     @Column(name = "created_by", nullable = false)
     private String createdBy;
 
+    @Column(name = "payment_method")
+    private String paymentMethod;
+
     @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SaleItem> items = new ArrayList<>();
 
@@ -83,6 +86,14 @@ public class Sale extends BaseEntity {
 
     public void setItems(List<SaleItem> items) {
         this.items = items;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
     }
 }
 

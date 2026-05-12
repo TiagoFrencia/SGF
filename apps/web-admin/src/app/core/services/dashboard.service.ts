@@ -1,103 +1,82 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { Observable, forkJoin, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+import { AuditEvent, AuditService } from './audit.service';
+import { ExpiryAlert, InventoryService, ReorderAlert } from './inventory.service';
 
-export interface DashboardMetrics {
-  totalSales: number;
-  totalRevenue: number;
-  ticketPromedio: number;
-  productsSold: number;
-  lowStockProducts: number;
-  expiringProducts: number;
-  pendingPrescriptions: number;
-  afipPendingInvoices: number;
+export interface IntegrationHealthCard {
+  name: string;
+  online: boolean;
+  message: string;
 }
 
-export interface SalesTrend {
-  date: string;
-  sales: number;
-  revenue: number;
-}
-
-export interface TopProduct {
-  productId: string;
-  productName: string;
-  gtin: string;
-  quantitySold: number;
-  revenue: number;
-}
-
-export interface CategoryPerformance {
-  category: string;
-  sales: number;
-  revenue: number;
-  margin: number;
+export interface DashboardSummary {
+  reorderAlerts: ReorderAlert[];
+  expiryAlerts: ExpiryAlert[];
+  recentAuditEvents: AuditEvent[];
+  integrations: IntegrationHealthCard[];
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class DashboardService {
-  private apiUrl = `${environment.apiUrl}/dashboard`;
+  private readonly apiUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private inventoryService: InventoryService,
+    private auditService: AuditService
+  ) {}
 
-  getMetrics(dateFrom?: string, dateTo?: string): Observable<DashboardMetrics> {
-    let params = new HttpParams();
-    if (dateFrom) params = params.set('from', dateFrom);
-    if (dateTo) params = params.set('to', dateTo);
-    return this.http.get<DashboardMetrics>(this.apiUrl, { params });
+  getSummary(): Observable<DashboardSummary> {
+    return forkJoin({
+      reorderAlerts: this.inventoryService.getReorderAlerts().pipe(catchError(() => of([]))),
+      expiryAlerts: this.inventoryService.getExpiringProducts(60).pipe(catchError(() => of([]))),
+      recentAuditEvents: this.auditService.getLatestEvents(8).pipe(catchError(() => of([]))),
+      afip: this.http.get<unknown>(`${this.apiUrl}/afip/invoices/health`).pipe(catchError(() => of(null))),
+      anmat: this.http.get<unknown>(`${this.apiUrl}/anmat/health`).pipe(catchError(() => of(null))),
+      adesfa: this.http.get<unknown>(`${this.apiUrl}/adesfa/health`).pipe(catchError(() => of(null)))
+    }).pipe(
+      map((result) => ({
+        reorderAlerts: result.reorderAlerts,
+        expiryAlerts: result.expiryAlerts,
+        recentAuditEvents: result.recentAuditEvents,
+        integrations: [
+          this.mapHealth('AFIP', result.afip),
+          this.mapHealth('ANMAT', result.anmat),
+          this.mapHealth('ADESFA', result.adesfa)
+        ]
+      }))
+    );
   }
 
-  getSalesTrend(days: number = 30): Observable<SalesTrend[]> {
-    const params = new HttpParams().set('days', days.toString());
-    return this.http.get<SalesTrend[]>(`${this.apiUrl}/trends/sales`, { params });
+  private mapHealth(name: string, payload: unknown): IntegrationHealthCard {
+    if (!payload || typeof payload !== 'object') {
+      return { name, online: false, message: 'No disponible' };
+    }
+
+    const data = payload as Record<string, unknown>;
+    return {
+      name,
+      online: this.readBoolean(data, ['online', 'healthy', 'available', 'valid']),
+      message: this.readString(data, ['message', 'status', 'environment', 'tokenStatus']) ?? 'Sin detalle'
+    };
   }
 
-  getTopProducts(limit: number = 10, dateFrom?: string, dateTo?: string): Observable<TopProduct[]> {
-    let params = new HttpParams().set('limit', limit.toString());
-    if (dateFrom) params = params.set('from', dateFrom);
-    if (dateTo) params = params.set('to', dateTo);
-    return this.http.get<TopProduct[]>(`${this.apiUrl}/products/top`, { params });
+  private readBoolean(source: Record<string, unknown>, keys: string[]): boolean {
+    return keys.some((key) => source[key] === true);
   }
 
-  getCategoryPerformance(dateFrom?: string, dateTo?: string): Observable<CategoryPerformance[]> {
-    let params = new HttpParams();
-    if (dateFrom) params = params.set('from', dateFrom);
-    if (dateTo) params = params.set('to', dateTo);
-    return this.http.get<CategoryPerformance[]>(`${this.apiUrl}/categories`, { params });
-  }
-
-  getLowStockAlerts(threshold?: number): Observable<any[]> {
-    const params = threshold ? new HttpParams().set('threshold', threshold.toString()) : undefined;
-    return this.http.get<any[]>(`${this.apiUrl}/alerts/low-stock`, { params });
-  }
-
-  getExpiringAlerts(days?: number): Observable<any[]> {
-    const params = days ? new HttpParams().set('days', days.toString()) : undefined;
-    return this.http.get<any[]>(`${this.apiUrl}/alerts/expiring`, { params });
-  }
-
-  getPendingPrescriptions(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/prescriptions/pending`);
-  }
-
-  getAfipStatus(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/afip/status`);
-  }
-
-  getAnmatStatus(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/anmat/status`);
-  }
-
-  getRecentActivity(limit: number = 20): Observable<any[]> {
-    const params = new HttpParams().set('limit', limit.toString());
-    return this.http.get<any[]>(`${this.apiUrl}/activity/recent`, { params });
-  }
-
-  exportReport(format: 'pdf' | 'excel' | 'csv'): Observable<Blob> {
-    const params = new HttpParams().set('format', format);
-    return this.http.get(`${this.apiUrl}/export`, { params, responseType: 'blob' });
+  private readString(source: Record<string, unknown>, keys: string[]): string | null {
+    for (const key of keys) {
+      const value = source[key];
+      if (typeof value === 'string' && value.trim().length > 0) {
+        return value;
+      }
+    }
+    return null;
   }
 }

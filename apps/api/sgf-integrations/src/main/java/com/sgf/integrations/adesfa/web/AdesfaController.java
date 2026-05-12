@@ -33,7 +33,7 @@ public class AdesfaController {
 
     @PostMapping("/validations/sales/{saleId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'CASHIER')")
-    public AdesfaValidationResponse validateSale(@PathVariable UUID saleId,
+    public AdesfaValidationResponse validateSale(@PathVariable("saleId") UUID saleId,
                                                  @Valid @RequestBody AdesfaValidationRequest request,
                                                  java.security.Principal principal) {
         return adesfaService.validateSale(saleId, request, principal.getName());
@@ -41,7 +41,7 @@ public class AdesfaController {
 
     @GetMapping("/validations/{validationId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'AUDITOR')")
-    public AdesfaValidationResponse getValidation(@PathVariable UUID validationId) {
+    public AdesfaValidationResponse getValidation(@PathVariable("validationId") UUID validationId) {
         return adesfaService.getValidation(validationId);
     }
 

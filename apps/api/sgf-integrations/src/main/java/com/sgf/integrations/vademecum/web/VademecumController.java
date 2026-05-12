@@ -5,6 +5,7 @@ import com.sgf.integrations.vademecum.DrugInteractionService.InteractionResult;
 import com.sgf.integrations.vademecum.GenericSuggestionService;
 import com.sgf.integrations.vademecum.GenericSuggestionService.GenericAlternative;
 import com.sgf.integrations.vademecum.GenericSuggestionService.SuggestionResult;
+import com.sgf.integrations.vademecum.VademecumImportService;
 import com.sgf.integrations.vademecum.VademecumSyncScheduler;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
@@ -34,13 +35,16 @@ public class VademecumController {
     private final DrugInteractionService interactionService;
     private final GenericSuggestionService suggestionService;
     private final VademecumSyncScheduler syncScheduler;
+    private final VademecumImportService importService;
 
     public VademecumController(DrugInteractionService interactionService,
                                 GenericSuggestionService suggestionService,
-                                VademecumSyncScheduler syncScheduler) {
+                                VademecumSyncScheduler syncScheduler,
+                                VademecumImportService importService) {
         this.interactionService = interactionService;
         this.suggestionService = suggestionService;
         this.syncScheduler = syncScheduler;
+        this.importService = importService;
     }
 
     /**
@@ -117,6 +121,14 @@ public class VademecumController {
                 "Sincronización de vademécums iniciada"));
     }
 
+    @PostMapping("/sync/public-msal")
+    public ResponseEntity<PublicMsalImportResponse> importPublicMsal(
+            @RequestParam(name = "seed", required = false) List<String> seeds) {
+        var result = importService.importPublicMsalSeeds(seeds == null ? List.of() : seeds);
+        return ResponseEntity.ok(new PublicMsalImportResponse(
+                result.source(), result.seeds(), result.fetched(), result.imported(), result.failed()));
+    }
+
     // --- Request/Response DTOs ---
 
     public record InteractionCheckRequest(List<String> gtins) {}
@@ -176,4 +188,6 @@ public class VademecumController {
     ) {}
 
     public record SyncResponse(String status, String message) {}
+
+    public record PublicMsalImportResponse(String source, int seeds, int fetched, int imported, int failed) {}
 }

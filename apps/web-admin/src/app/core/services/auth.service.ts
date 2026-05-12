@@ -5,7 +5,7 @@ import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface AuthResponse {
-  token: string;
+  accessToken: string;
   username: string;
   roles: string[];
 }
@@ -47,6 +47,6 @@ export class AuthService {
   }
 
   getToken(): string | null {
-    return this.currentUser()?.token || null;
+    return this.currentUser()?.accessToken || null;
   }
 }

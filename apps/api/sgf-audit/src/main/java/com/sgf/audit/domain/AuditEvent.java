@@ -26,6 +26,9 @@ public class AuditEvent {
     @Column(nullable = false)
     private OffsetDateTime createdAt;
 
+    @Column(nullable = false)
+    private String tenantId;
+
     private String previousHash;
     private String hash;
 
@@ -110,5 +113,12 @@ public class AuditEvent {
     public void setHash(String hash) {
         this.hash = hash;
     }
-}
 
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
+    }
+}

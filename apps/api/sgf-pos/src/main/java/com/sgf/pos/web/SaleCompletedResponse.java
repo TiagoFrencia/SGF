@@ -13,6 +13,7 @@ public record SaleCompletedResponse(
         BigDecimal totalAmount,
         int itemCount,
         OffsetDateTime completedAt,
+        String paymentMethod,
         List<SaleCompletedItem> items
 ) {
     public static SaleCompletedResponse from(Sale sale) {
@@ -23,10 +24,13 @@ public record SaleCompletedResponse(
                 sale.getTotalAmount(),
                 sale.getItems().size(),
                 sale.getSoldAt(),
+                sale.getPaymentMethod(),
                 sale.getItems().stream()
                         .map(item -> new SaleCompletedItem(
                                 item.getProduct().getId(),
                                 item.getProduct().getCommercialName(),
+                                item.getProduct().getGtin(),
+                                item.getProduct().getTroquel(),
                                 item.getBatch() != null ? item.getBatch().getLotNumber() : null,
                                 item.getQuantity(),
                                 item.getUnitPrice(),
@@ -38,6 +42,8 @@ public record SaleCompletedResponse(
     public record SaleCompletedItem(
             UUID productId,
             String productName,
+            String gtin,
+            String troquel,
             String lotNumber,
             int quantity,
             BigDecimal unitPrice,

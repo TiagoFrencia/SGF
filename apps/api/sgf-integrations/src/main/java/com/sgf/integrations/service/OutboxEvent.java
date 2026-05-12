@@ -24,6 +24,11 @@ public class OutboxEvent {
     private String status;
     private OffsetDateTime createdAt;
     private OffsetDateTime processedAt;
+    private int retryCount;
+
+    @Column(columnDefinition = "TEXT")
+    private String lastError;
+
 
     @PrePersist
     public void prePersist() {
@@ -97,6 +102,22 @@ public class OutboxEvent {
 
     public void setProcessedAt(OffsetDateTime processedAt) {
         this.processedAt = processedAt;
+    }
+
+    public int getRetryCount() {
+        return retryCount;
+    }
+
+    public void setRetryCount(int retryCount) {
+        this.retryCount = retryCount;
+    }
+
+    public String getLastError() {
+        return lastError;
+    }
+
+    public void setLastError(String lastError) {
+        this.lastError = lastError;
     }
 }
 

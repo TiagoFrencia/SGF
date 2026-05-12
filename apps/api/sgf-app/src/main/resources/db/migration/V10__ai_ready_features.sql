@@ -27,7 +27,7 @@ SELECT
     SUM(si.quantity) AS units_sold,
     SUM(si.subtotal) AS revenue,
     MAX(s.weather_condition) AS weather,
-    MAX(s.is_holiday) AS is_holiday,
+    BOOL_OR(s.is_holiday) AS is_holiday,
     MAX(s.local_epidemic_indicator) AS epidemic_status
 FROM sales s
 JOIN sale_items si ON si.sale_id = s.id
@@ -40,7 +40,7 @@ CREATE OR REPLACE VIEW analytics_hourly_patterns AS
 SELECT
     EXTRACT(HOUR FROM s.sold_at) AS hour_of_day,
     EXTRACT(DOW FROM s.sold_at) AS day_of_week,
-    p.therapeutic_category,
+    cat.therapeutic_category,
     COUNT(*) AS sale_count,
     AVG(s.total_amount) AS avg_basket
 FROM sales s
@@ -57,7 +57,7 @@ LEFT JOIN (
     GROUP BY product_id
 ) AS cat ON cat.product_id = p.id
 WHERE s.status = 'COMPLETED'
-GROUP BY EXTRACT(HOUR FROM s.sold_at), EXTRACT(DOW FROM s.sold_at), p.therapeutic_category;
+GROUP BY EXTRACT(HOUR FROM s.sold_at), EXTRACT(DOW FROM s.sold_at), cat.therapeutic_category;
 
 -- Stock-out risk indicators (for reorder point optimization)
 CREATE OR REPLACE VIEW analytics_stock_risk AS

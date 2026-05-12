@@ -1,26 +1,35 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
-import { MatSidenavModule } from '@angular/material/sidenav';
-import { MatListModule } from '@angular/material/list';
-import { MatIconModule } from '@angular/material/icon';
-import { MatToolbarModule } from '@angular/material/toolbar';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatListModule } from '@angular/material/list';
+import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatToolbarModule } from '@angular/material/toolbar';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [
-    CommonModule, RouterOutlet, RouterLink, RouterLinkActive,
-    MatSidenavModule, MatListModule, MatIconModule, MatToolbarModule, MatButtonModule
+    CommonModule,
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    MatSidenavModule,
+    MatListModule,
+    MatIconModule,
+    MatToolbarModule,
+    MatButtonModule
   ],
   template: `
     <mat-sidenav-container class="app-container">
       <mat-sidenav mode="side" opened class="sidebar glass-card">
         <div class="logo-container p-6">
-          <h2 class="text-2xl font-bold text-blue-700">SGF <span class="text-xs font-normal text-slate-500">v1.0</span></h2>
+          <h2 class="text-2xl font-bold text-blue-700">
+            SGF <span class="text-xs font-normal text-slate-500">v1.0</span>
+          </h2>
         </div>
-        
+
         <mat-nav-list>
           <a mat-list-item routerLink="/dashboard" routerLinkActive="active-link">
             <mat-icon matListItemIcon>dashboard</mat-icon>
@@ -38,14 +47,9 @@ import { MatButtonModule } from '@angular/material/button';
             <mat-icon matListItemIcon>warehouse</mat-icon>
             <span matListItemTitle>Inventario</span>
           </a>
-          <div class="divider"></div>
-          <a mat-list-item routerLink="/integrations" routerLinkActive="active-link">
-            <mat-icon matListItemIcon>extension</mat-icon>
-            <span matListItemTitle>Integraciones</span>
-          </a>
           <a mat-list-item routerLink="/audit" routerLinkActive="active-link">
             <mat-icon matListItemIcon>history_edu</mat-icon>
-            <span matListItemTitle>Auditoría</span>
+            <span matListItemTitle>Auditoria</span>
           </a>
         </mat-nav-list>
       </mat-sidenav>
@@ -53,10 +57,10 @@ import { MatButtonModule } from '@angular/material/button';
       <mat-sidenav-content>
         <mat-toolbar class="bg-transparent">
           <span class="flex-grow"></span>
-          <button mat-icon-button>
+          <button mat-icon-button type="button">
             <mat-icon>notifications</mat-icon>
           </button>
-          <button mat-icon-button>
+          <button mat-icon-button type="button">
             <mat-icon>account_circle</mat-icon>
           </button>
         </mat-toolbar>
@@ -83,11 +87,6 @@ import { MatButtonModule } from '@angular/material/button';
       background: rgba(37, 99, 235, 0.1) !important;
       color: #2563eb !important;
       border-right: 4px solid #2563eb;
-    }
-    .divider {
-      height: 1px;
-      background: #e2e8f0;
-      margin: 1rem;
     }
     main {
       padding: 1rem;

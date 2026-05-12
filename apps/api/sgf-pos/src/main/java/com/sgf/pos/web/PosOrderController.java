@@ -41,7 +41,7 @@ public class PosOrderController {
 
     @PostMapping("/{orderId}/items")
     public ResponseEntity<PosOrderResponse> addItem(
-            @PathVariable UUID orderId, @RequestBody AddItemRequest request) {
+            @PathVariable("orderId") UUID orderId, @RequestBody AddItemRequest request) {
         PosOrder order = orderService.addItem(
                 orderId, request.productId(), request.quantity(),
                 request.unitPrice(), request.batchId());
@@ -50,7 +50,7 @@ public class PosOrderController {
 
     @PostMapping("/{orderId}/scan")
     public ResponseEntity<PosOrderResponse> scanAdd(
-            @PathVariable UUID orderId, @RequestBody ScanRequest request) {
+            @PathVariable("orderId") UUID orderId, @RequestBody ScanRequest request) {
         PosOrder order = orderService.scanAdd(
                 orderId, request.gtin(), request.quantity(), request.unitPrice());
         return ResponseEntity.ok(PosOrderResponse.from(order));
@@ -58,43 +58,45 @@ public class PosOrderController {
 
     @DeleteMapping("/{orderId}/items/{itemId}")
     public ResponseEntity<PosOrderResponse> removeItem(
-            @PathVariable UUID orderId, @PathVariable UUID itemId) {
+            @PathVariable("orderId") UUID orderId, @PathVariable("itemId") UUID itemId) {
         PosOrder order = orderService.removeItem(orderId, itemId);
         return ResponseEntity.ok(PosOrderResponse.from(order));
     }
 
     @PatchMapping("/{orderId}/ready")
-    public ResponseEntity<PosOrderResponse> markReady(@PathVariable UUID orderId) {
+    public ResponseEntity<PosOrderResponse> markReady(@PathVariable("orderId") UUID orderId) {
         PosOrder order = orderService.markReady(orderId);
         return ResponseEntity.ok(PosOrderResponse.from(order));
     }
 
     @PostMapping("/{orderId}/complete")
     public ResponseEntity<SaleCompletedResponse> complete(
-            @PathVariable UUID orderId, @RequestBody CompleteOrderRequest request) {
+            @PathVariable("orderId") UUID orderId, @RequestBody CompleteOrderRequest request) {
         UUID saleId = orderService.completeOrder(
-                orderId, request.paymentMethod(), request.idempotencyKey());
+                orderId, request.paymentMethod(), request.idempotencyKey(),
+                request.pamiPrescriptionId(), request.pamiBeneficiaryId(),
+                request.doctorLicense(), request.doctorRegion());
         return ResponseEntity.ok(new SaleCompletedResponse(
                 saleId, request.idempotencyKey(), "COMPLETED",
-                null, 0, null, List.of()));
+                null, 0, null, request.paymentMethod(), List.of()));
     }
 
     @PatchMapping("/{orderId}/void")
-    public ResponseEntity<PosOrderResponse> voidOrder(@PathVariable UUID orderId) {
+    public ResponseEntity<PosOrderResponse> voidOrder(@PathVariable("orderId") UUID orderId) {
         PosOrder order = orderService.voidOrder(orderId);
         return ResponseEntity.ok(PosOrderResponse.from(order));
     }
 
     @GetMapping("/{orderId}")
-    public ResponseEntity<PosOrderResponse> getOrder(@PathVariable UUID orderId) {
+    public ResponseEntity<PosOrderResponse> getOrder(@PathVariable("orderId") UUID orderId) {
         PosOrder order = orderService.findById(orderId);
         return ResponseEntity.ok(PosOrderResponse.from(order));
     }
 
     @GetMapping
     public ResponseEntity<List<PosOrderResponse>> listOpen(
-            @RequestParam UUID branchId,
-            @RequestParam(required = false) OrderStatus status) {
+            @RequestParam(name = "branchId") UUID branchId,
+            @RequestParam(name = "status", required = false) OrderStatus status) {
         if (status != null) {
             var filtered = orderService.listOpenOrders(branchId).stream()
                     .filter(order -> order.getStatus() == status)
@@ -108,7 +110,7 @@ public class PosOrderController {
 
     @PostMapping("/terminals/{terminalId}/new")
     public ResponseEntity<PosOrderResponse> newTerminalOrder(
-            @PathVariable String terminalId,
+            @PathVariable("terminalId") String terminalId,
             @RequestBody CreateDraftRequest request) {
         PosOrder order = multiOrderService.newOrder(
                 terminalId,
@@ -122,14 +124,14 @@ public class PosOrderController {
 
     @PatchMapping("/terminals/{terminalId}/switch/{orderId}")
     public ResponseEntity<PosOrderResponse> switchTerminalOrder(
-            @PathVariable String terminalId,
-            @PathVariable UUID orderId) {
+            @PathVariable("terminalId") String terminalId,
+            @PathVariable("orderId") UUID orderId) {
         PosOrder order = multiOrderService.switchTo(terminalId, orderId);
         return ResponseEntity.ok(PosOrderResponse.from(order));
     }
 
     @GetMapping("/terminals/{terminalId}/active")
-    public ResponseEntity<PosOrderResponse> getTerminalActiveOrder(@PathVariable String terminalId) {
+    public ResponseEntity<PosOrderResponse> getTerminalActiveOrder(@PathVariable("terminalId") String terminalId) {
         return multiOrderService.getActive(terminalId)
                 .map(PosOrderResponse::from)
                 .map(ResponseEntity::ok)
@@ -137,22 +139,22 @@ public class PosOrderController {
     }
 
     @GetMapping("/terminals/{terminalId}")
-    public ResponseEntity<List<PosOrderResponse>> listTerminalOrders(@PathVariable String terminalId) {
+    public ResponseEntity<List<PosOrderResponse>> listTerminalOrders(@PathVariable("terminalId") String terminalId) {
         return ResponseEntity.ok(multiOrderService.listOpen(terminalId).stream()
                 .map(PosOrderResponse::from)
                 .toList());
     }
 
     @DeleteMapping("/terminals/{terminalId}")
-    public ResponseEntity<Void> closeTerminal(@PathVariable String terminalId) {
+    public ResponseEntity<Void> closeTerminal(@PathVariable("terminalId") String terminalId) {
         multiOrderService.closeTerminal(terminalId);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/terminals/{terminalId}/recover")
     public ResponseEntity<TerminalRecoveryResponse> recoverTerminal(
-            @PathVariable String terminalId,
-            @RequestParam UUID branchId) {
+            @PathVariable("terminalId") String terminalId,
+            @RequestParam(name = "branchId") UUID branchId) {
         int recovered = multiOrderService.recoverTerminal(terminalId, branchId);
         Optional<UUID> active = multiOrderService.getActiveOrderId(terminalId);
         return ResponseEntity.ok(new TerminalRecoveryResponse(
@@ -165,8 +167,8 @@ public class PosOrderController {
 
     @DeleteMapping("/terminals/{terminalId}/orders/{orderId}")
     public ResponseEntity<Void> removeTerminalOrder(
-            @PathVariable String terminalId,
-            @PathVariable UUID orderId) {
+            @PathVariable("terminalId") String terminalId,
+            @PathVariable("orderId") UUID orderId) {
         multiOrderService.removeFromTerminal(terminalId, orderId);
         return ResponseEntity.noContent().build();
     }
@@ -181,7 +183,9 @@ public class PosOrderController {
 
     public record ScanRequest(String gtin, int quantity, BigDecimal unitPrice) {}
 
-    public record CompleteOrderRequest(String paymentMethod, String idempotencyKey) {}
+    public record CompleteOrderRequest(String paymentMethod, String idempotencyKey,
+                                       String pamiPrescriptionId, String pamiBeneficiaryId,
+                                       String doctorLicense, String doctorRegion) {}
 
     public record TerminalRecoveryResponse(
             String terminalId,
@@ -216,6 +220,10 @@ public class PosOrderController {
                                     item.getId(),
                                     item.getProduct().getId(),
                                     item.getProduct().getCommercialName(),
+                                    item.getProduct().getGtin(),
+                                    item.getProduct().getTroquel(),
+                                    item.getProduct().getSource(),
+                                    item.getProduct().getSourceUpdatedAt(),
                                     item.getQuantity(),
                                     item.getUnitPrice(),
                                     item.getSubtotal(),
@@ -227,6 +235,7 @@ public class PosOrderController {
 
     public record PosOrderItemResponse(
             UUID itemId, UUID productId, String productName,
+            String gtin, String troquel, String productSource, java.time.LocalDate productSourceUpdatedAt,
             int quantity, BigDecimal unitPrice, BigDecimal subtotal, UUID batchId
     ) {}
 }

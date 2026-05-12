@@ -2,139 +2,165 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { Product } from './product.service';
+import { InventoryReceiptResponse } from './inventory.service';
 
-export interface Sale {
-  id: string;
-  invoiceNumber?: string;
-  timestamp: Date;
-  total: number;
-  subtotal: number;
-  tax: number;
-  discount: number;
-  insuranceCoverage?: number;
-  items: SaleItem[];
-  paymentMethod: string;
-  customerId?: string;
-  customerName?: string;
-  prescriptionId?: string;
-  afipCAE?: string;
-  anmatTraceabilityId?: string;
-}
-
-export interface SaleItem {
+export interface PosOrderItem {
+  itemId: string;
   productId: string;
   productName: string;
-  gtin: string;
+  gtin?: string | null;
+  troquel?: string | null;
+  productSource?: string | null;
+  productSourceUpdatedAt?: string | null;
   quantity: number;
   unitPrice: number;
-  totalPrice: number;
-  batchNumber?: string;
-  expirationDate?: string;
-  requiresPrescription: boolean;
+  subtotal: number;
+  batchId?: string | null;
 }
 
-export interface POSConfig {
+export interface PosOrder {
+  orderId: string;
+  orderNumber: number;
+  status: 'DRAFT' | 'READY' | 'COMPLETED' | 'VOIDED';
+  customerName?: string | null;
+  customerDocument?: string | null;
+  totalAmount: number;
+  itemCount: number;
+  items: PosOrderItem[];
+}
+
+export interface CreateDraftRequest {
   branchId: string;
-  branchName: string;
-  registerId: string;
-  allowNegativeStock: boolean;
-  requirePrescriptionValidation: boolean;
-  defaultInsurancePlan?: string;
+  customerName?: string;
+  customerDocument?: string;
+  notes?: string;
 }
 
-export interface CheckoutRequest {
-  items: CartItem[];
+export interface CompleteOrderRequest {
   paymentMethod: string;
-  customerId?: string;
-  prescriptionId?: string;
-  insurancePlanId?: string;
-  observations?: string;
+  idempotencyKey: string;
+  pamiPrescriptionId?: string;
+  pamiBeneficiaryId?: string;
+  doctorLicense?: string;
+  doctorRegion?: string;
 }
 
-export interface CartItem {
-  productId: string;
-  gtin: string;
-  quantity: number;
-  batchNumber?: string;
-}
-
-export interface CheckoutResponse {
+export interface SaleCompletedResponse {
   saleId: string;
-  invoiceNumber?: string;
-  total: number;
-  afipCAE?: string;
-  anmatTraceabilityId?: string;
-  receipt: any;
+  idempotencyKey: string;
+  status: string;
+  totalAmount?: number | null;
+  completedAt?: string | null;
+  paymentMethod?: string | null;
+}
+
+export interface TerminalRecoveryResponse {
+  terminalId: string;
+  branchId: string;
+  recoveredOrders: number;
+  activeOrderId?: string | null;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class POSService {
-  private apiUrl = `${environment.apiUrl}/pos`;
+  private readonly productsUrl = `${environment.apiUrl}/products`;
+  private readonly inventoryUrl = `${environment.apiUrl}/inventory`;
+  private readonly posOrdersUrl = `${environment.apiUrl}/pos/orders`;
+
+  readonly defaultBranchId = '00000000-0000-0000-0000-000000000101';
+  readonly defaultTerminalId = 'POS-TERM-001';
 
   constructor(private http: HttpClient) {}
 
-  getConfig(): Observable<POSConfig> {
-    return this.http.get<POSConfig>(`${this.apiUrl}/config`);
+  searchProducts(query: string): Observable<Product[]> {
+    const trimmed = query.trim();
+    let params = new HttpParams();
+    if (/^\d{8,14}$/.test(trimmed)) {
+      params = params.set('gtin', trimmed);
+    } else {
+      params = params.set('name', trimmed);
+    }
+    return this.http.get<Product[]>(this.productsUrl, { params });
   }
 
-  searchProduct(query: string): Observable<any[]> {
-    const params = new HttpParams().set('q', query);
-    return this.http.get<any[]>(`${this.apiUrl}/products/search`, { params });
+  getProductByGtin(gtin: string): Observable<Product> {
+    return this.http.get<Product>(`${this.productsUrl}/search/gtin/${gtin}`);
   }
 
-  getProductByGtin(gtin: string): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/products/gtin/${gtin}`);
+  getAvailableBatches(productId: string): Observable<InventoryReceiptResponse[]> {
+    return this.http.get<InventoryReceiptResponse[]>(`${this.inventoryUrl}/products/${productId}/batches`);
   }
 
-  getAvailableBatches(productId: string): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/products/${productId}/batches`);
+  createDraft(request: CreateDraftRequest): Observable<PosOrder> {
+    return this.http.post<PosOrder>(this.posOrdersUrl, request);
   }
 
-  validatePrescription(prescriptionId: string): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/prescriptions/validate/${prescriptionId}`);
-  }
-
-  validateInsurance(customerId: string, planId?: string): Observable<any> {
-    const params = planId ? new HttpParams().set('planId', planId) : undefined;
-    return this.http.get<any>(`${this.apiUrl}/insurance/validate/${customerId}`, { params });
-  }
-
-  checkout(request: CheckoutRequest): Observable<CheckoutResponse> {
-    return this.http.post<CheckoutResponse>(`${this.apiUrl}/checkout`, request);
-  }
-
-  cancelSale(saleId: string, reason: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/sales/${saleId}`, {
-      body: { reason }
+  addItem(orderId: string, productId: string, quantity: number, unitPrice?: number | null, batchId?: string | null): Observable<PosOrder> {
+    return this.http.post<PosOrder>(`${this.posOrdersUrl}/${orderId}/items`, {
+      productId,
+      quantity,
+      unitPrice: unitPrice ?? null,
+      batchId: batchId ?? null
     });
   }
 
-  getSaleById(saleId: string): Observable<Sale> {
-    return this.http.get<Sale>(`${this.apiUrl}/sales/${saleId}`);
+  scanAdd(orderId: string, gtin: string, quantity: number, unitPrice?: number | null): Observable<PosOrder> {
+    return this.http.post<PosOrder>(`${this.posOrdersUrl}/${orderId}/scan`, {
+      gtin,
+      quantity,
+      unitPrice: unitPrice ?? null
+    });
   }
 
-  getSalesByDate(date: string, branchId?: string): Observable<Sale[]> {
-    let params = new HttpParams().set('date', date);
-    if (branchId) params = params.set('branchId', branchId);
-    return this.http.get<Sale[]>(`${this.apiUrl}/sales/by-date`, { params });
+  markReady(orderId: string): Observable<PosOrder> {
+    return this.http.patch<PosOrder>(`${this.posOrdersUrl}/${orderId}/ready`, {});
   }
 
-  printReceipt(saleId: string): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/sales/${saleId}/receipt`, { responseType: 'blob' });
+  completeOrder(orderId: string, request: CompleteOrderRequest): Observable<SaleCompletedResponse> {
+    return this.http.post<SaleCompletedResponse>(`${this.posOrdersUrl}/${orderId}/complete`, request);
   }
 
-  sendEmailReceipt(saleId: string, email: string): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/sales/${saleId}/email`, { email });
+  getOrder(orderId: string): Observable<PosOrder> {
+    return this.http.get<PosOrder>(`${this.posOrdersUrl}/${orderId}`);
   }
 
-  getDailySummary(date?: string): Observable<any> {
-    const params = date ? new HttpParams().set('date', date) : undefined;
-    return this.http.get<any>(`${this.apiUrl}/summary/daily`, { params });
+  listOpenOrders(branchId = this.defaultBranchId, status?: string): Observable<PosOrder[]> {
+    let params = new HttpParams().set('branchId', branchId);
+    if (status) {
+      params = params.set('status', status);
+    }
+    return this.http.get<PosOrder[]>(this.posOrdersUrl, { params });
   }
 
-  offlineSync(offlineSales: any[]): Observable<any> {
-    return this.http.post(`${this.apiUrl}/sync/offline`, offlineSales);
+  createTerminalOrder(terminalId: string, request: CreateDraftRequest): Observable<PosOrder> {
+    return this.http.post<PosOrder>(`${this.posOrdersUrl}/terminals/${terminalId}/new`, request);
+  }
+
+  switchTerminalOrder(terminalId: string, orderId: string): Observable<PosOrder> {
+    return this.http.patch<PosOrder>(`${this.posOrdersUrl}/terminals/${terminalId}/switch/${orderId}`, {});
+  }
+
+  getTerminalActiveOrder(terminalId: string): Observable<PosOrder> {
+    return this.http.get<PosOrder>(`${this.posOrdersUrl}/terminals/${terminalId}/active`);
+  }
+
+  listTerminalOrders(terminalId: string): Observable<PosOrder[]> {
+    return this.http.get<PosOrder[]>(`${this.posOrdersUrl}/terminals/${terminalId}`);
+  }
+
+  recoverTerminal(terminalId: string, branchId = this.defaultBranchId): Observable<TerminalRecoveryResponse> {
+    const params = new HttpParams().set('branchId', branchId);
+    return this.http.post<TerminalRecoveryResponse>(`${this.posOrdersUrl}/terminals/${terminalId}/recover`, {}, { params });
+  }
+
+  closeTerminal(terminalId: string): Observable<void> {
+    return this.http.delete<void>(`${this.posOrdersUrl}/terminals/${terminalId}`);
+  }
+
+  removeTerminalOrder(terminalId: string, orderId: string): Observable<void> {
+    return this.http.delete<void>(`${this.posOrdersUrl}/terminals/${terminalId}/orders/${orderId}`);
   }
 }

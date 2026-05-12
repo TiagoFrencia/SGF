@@ -1,0 +1,132 @@
+.h-14 { height: 3.5rem; }
+.h-12 { height: 3rem; }
+.h-16 { height: 4rem; }
+.w-96 { width: 24rem; }
+.gap-4 { gap: 1rem; }
+.p-8 { padding: 2rem; }
+.border-t { border-top: 1px solid #e2e8f0; }
+.text-xl { font-size: 1.25rem; }
+.text-lg { font-size: 1.125rem; }
+.text-blue-700 { color: #1d4ed8; }
+.wrap { flex-wrap: wrap; }
+.price-field { width: 170px; }
+.left-column { min-width: 0; }
+
+.terminal-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+
+.terminal-field {
+  min-width: 220px;
+}
+
+.terminal-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+  color: #334155;
+}
+
+.open-orders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.queue-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.queue-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.queue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.queue-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.queue-count {
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #0f172a;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.terminal-order-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  padding: 0.9rem;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.terminal-order-card.ready {
+  background: rgba(236, 253, 245, 0.9);
+}
+
+.terminal-order-card.draft {
+  background: rgba(239, 246, 255, 0.9);
+}
+
+.terminal-order-card.active {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.18);
+}
+
+.terminal-order-head,
+.terminal-order-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.terminal-order-meta {
+  margin: 0.6rem 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.empty-box {
+  color: #64748b;
+  padding: 1rem 0;
+  text-align: center;
+}
+
+.results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.message {
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.message.error { color: #b91c1c; }
+.message.success { color: #15803d; }
+
+.receipt-box {
+  border-radius: 0.75rem;
+  background: rgba(219, 234, 254, 0.8);
+  padding: 0.75rem;
+  color: #1e3a8a;
+}

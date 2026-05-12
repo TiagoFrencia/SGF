@@ -33,7 +33,8 @@ public class AuditEventListener {
             event.eventType(),
             event.aggregateType(),
             event.aggregateId(),
-            event.payload()
+            event.payload(),
+            event.tenantId()
         );
     }
 
@@ -45,7 +46,8 @@ public class AuditEventListener {
             event.eventType(),
             event.aggregateType(),
             event.aggregateId(),
-            event.payload()
+            event.payload(),
+            event.tenantId()
         );
     }
 
@@ -57,7 +59,8 @@ public class AuditEventListener {
             event.eventType(),
             event.aggregateType(),
             event.aggregateId(),
-            event.payload()
+            event.payload(),
+            event.tenantId()
         );
     }
 
@@ -69,7 +72,8 @@ public class AuditEventListener {
             event.eventType(),
             event.aggregateType(),
             event.aggregateId(),
-            event.payload()
+            event.payload(),
+            event.tenantId()
         );
     }
 
@@ -81,7 +85,8 @@ public class AuditEventListener {
             event.eventType(),
             event.aggregateType(),
             event.aggregateId(),
-            event.payload()
+            event.payload(),
+            event.tenantId()
         );
     }
 }

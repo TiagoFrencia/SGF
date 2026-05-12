@@ -1,4 +1,3 @@
-```
 # Compiled and build artifacts
 *.class
 *.o
@@ -6,6 +5,7 @@
 *.out
 *.pyc
 __pycache__/
+build/
 
 # Dependencies
 node_modules/
@@ -15,6 +15,7 @@ target/
 .gradle/
 .mypy_cache/
 .pytest_cache/
+.tools/
 
 # Logs and temp files
 *.log
@@ -62,4 +63,8 @@ htmlcov/
 *.tar.bz2
 *.tar.xz
 *.tar.zst
-```
+
+# Graphify
+graphify-out/manifest.json
+graphify-out/cost.json
+graphify-out/cache/

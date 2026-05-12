@@ -11,11 +11,15 @@ public record MigrationFinishedEvent(
     String status,
     long passedCount,
     long failedCount,
+    String tenantId,
     OffsetDateTime occurredAt
 ) implements DomainEvent {
 
     @Override
     public UUID aggregateId() { return UUID.nameUUIDFromBytes(migrationId.getBytes()); }
+
+    @Override
+    public String tenantId() { return tenantId; }
 
     @Override
     public String aggregateType() { return "MIGRATION"; }

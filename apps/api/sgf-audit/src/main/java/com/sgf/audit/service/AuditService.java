@@ -3,6 +3,7 @@ package com.sgf.audit.service;
 import com.sgf.audit.domain.AuditEvent;
 import com.sgf.audit.domain.AuditEventRepository;
 import com.sgf.audit.web.AuditEventResponse;
+import com.sgf.core.context.TenantContext;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.PageRequest;
@@ -10,6 +11,8 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class AuditService {
+
+    static final String DEFAULT_TENANT_ID = "00000000-0000-0000-0000-000000000001";
 
     private final AuditEventRepository auditEventRepository;
 
@@ -19,6 +22,11 @@ public class AuditService {
 
     @org.springframework.transaction.annotation.Transactional
     public void record(String actorUsername, String eventType, String aggregateType, UUID aggregateId, String detailsJson) {
+        record(actorUsername, eventType, aggregateType, aggregateId, detailsJson, resolveTenantId());
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void record(String actorUsername, String eventType, String aggregateType, UUID aggregateId, String detailsJson, String tenantId) {
         String lastHash = auditEventRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(0, 1))
                 .stream().findFirst().map(AuditEvent::getHash).orElse("0".repeat(64));
 
@@ -28,6 +36,8 @@ public class AuditService {
         event.setAggregateType(aggregateType);
         event.setAggregateId(aggregateId);
         event.setDetailsJson(detailsJson);
+        event.setTenantId(tenantId == null || tenantId.isBlank() ? DEFAULT_TENANT_ID : tenantId);
+
         event.setPreviousHash(lastHash);
         
         String dataToHash = lastHash
@@ -38,6 +48,11 @@ public class AuditService {
         event.setHash(calculateHash(dataToHash));
         
         auditEventRepository.save(event);
+    }
+
+    private String resolveTenantId() {
+        String tenantId = TenantContext.getTenantId();
+        return tenantId == null || tenantId.isBlank() ? DEFAULT_TENANT_ID : tenantId;
     }
 
     private String calculateHash(String data) {
@@ -109,6 +124,7 @@ public class AuditService {
         return value == null ? "" : value;
     }
 
+
     public record AuditChainVerification(
             boolean valid,
             int verifiedEvents,
@@ -116,4 +132,3 @@ public class AuditService {
             String message
     ) {}
 }
-

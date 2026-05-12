@@ -4,9 +4,10 @@ import com.sgf.audit.service.AuditService;
 import com.sgf.core.domain.ConflictException;
 import com.sgf.core.domain.NotFoundException;
 import com.sgf.inventory.domain.Batch;
+import com.sgf.inventory.domain.BatchRepository;
 import com.sgf.inventory.domain.BranchTransfer;
-import com.sgf.inventory.domain.BranchTransferRepository;
 import com.sgf.inventory.domain.BranchTransfer.TransferStatus;
+import com.sgf.inventory.domain.BranchTransferRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -18,13 +19,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class BranchTransferService {
 
     private final BranchTransferRepository transferRepository;
+    private final BatchRepository batchRepository;
     private final InventoryService inventoryService;
     private final AuditService auditService;
 
     public BranchTransferService(BranchTransferRepository transferRepository,
-                                  InventoryService inventoryService,
-                                  AuditService auditService) {
+                                 BatchRepository batchRepository,
+                                 InventoryService inventoryService,
+                                 AuditService auditService) {
         this.transferRepository = transferRepository;
+        this.batchRepository = batchRepository;
         this.inventoryService = inventoryService;
         this.auditService = auditService;
     }
@@ -33,7 +37,7 @@ public class BranchTransferService {
      * Create a new transfer request. Reserves stock at source branch immediately.
      */
     public BranchTransfer create(UUID sourceBranchId, UUID destinationBranchId,
-                                  UUID productId, UUID batchId, int quantity, String notes, String actor) {
+                                 UUID productId, UUID batchId, int quantity, String notes, String actor) {
         if (sourceBranchId.equals(destinationBranchId)) {
             throw new ConflictException("Source and destination branch must be different");
         }
@@ -41,7 +45,6 @@ public class BranchTransferService {
             throw new ConflictException("Quantity must be positive");
         }
 
-        // Reserve stock with FEFO
         inventoryService.reserve(productId, quantity, UUID.randomUUID());
 
         Batch batch = findBatchById(batchId);
@@ -58,11 +61,11 @@ public class BranchTransferService {
 
         auditService.record(actor, "BRANCH_TRANSFER_CREATED", "TRANSFER", saved.getId(),
                 "{\"source\":\"" + sourceBranchId + "\",\"dest\":\"" + destinationBranchId + "\",\"qty\":" + quantity + "}");
-        return saved;
+        return findById(saved.getId());
     }
 
     /**
-     * Source branch confirms shipment — status moves to IN_TRANSIT.
+     * Source branch confirms shipment and the transfer moves to IN_TRANSIT.
      */
     public BranchTransfer ship(UUID transferId, UUID branchId, String actor) {
         BranchTransfer transfer = findById(transferId);
@@ -75,11 +78,12 @@ public class BranchTransferService {
         transfer.setStatus(TransferStatus.IN_TRANSIT);
         transfer.setShippedAt(OffsetDateTime.now());
         auditService.record(actor, "BRANCH_TRANSFER_SHIPPED", "TRANSFER", transferId, "{}");
-        return transferRepository.save(transfer);
+        transferRepository.save(transfer);
+        return findById(transferId);
     }
 
     /**
-     * Destination branch confirms receipt. Validates quantity received vs expected.
+     * Destination branch confirms receipt. Quantity mismatch opens a dispute.
      */
     public BranchTransfer receive(UUID transferId, UUID branchId, Integer receivedQty, String actor) {
         BranchTransfer transfer = findById(transferId);
@@ -104,7 +108,8 @@ public class BranchTransferService {
             auditService.record(actor, "BRANCH_TRANSFER_RECEIVED", "TRANSFER", transferId,
                     "{\"qty\":" + qty + "}");
         }
-        return transferRepository.save(transfer);
+        transferRepository.save(transfer);
+        return findById(transferId);
     }
 
     /**
@@ -120,7 +125,8 @@ public class BranchTransferService {
         }
         transfer.setStatus(TransferStatus.CANCELLED);
         auditService.record(actor, "BRANCH_TRANSFER_CANCELLED", "TRANSFER", transferId, "{}");
-        return transferRepository.save(transfer);
+        transferRepository.save(transfer);
+        return findById(transferId);
     }
 
     @Transactional(readOnly = true)
@@ -134,7 +140,7 @@ public class BranchTransferService {
         if (status != null) {
             return transferRepository.findBySourceBranchIdAndStatus(branchId, status);
         }
-        return transferRepository.findAll();
+        return transferRepository.findBySourceBranchId(branchId);
     }
 
     @Transactional(readOnly = true)
@@ -142,12 +148,11 @@ public class BranchTransferService {
         if (status != null) {
             return transferRepository.findByDestinationBranchIdAndStatus(branchId, status);
         }
-        return transferRepository.findAll();
+        return transferRepository.findByDestinationBranchId(branchId);
     }
 
     private Batch findBatchById(UUID batchId) {
-        // Delegate to InventoryService batch resolution
-        // In a real impl this would be a BatchRepository.findById call
-        return new Batch(); // placeholder — actual method goes through inventoryService
+        return batchRepository.findById(batchId)
+                .orElseThrow(() -> new NotFoundException("Batch not found: " + batchId));
     }
 }
